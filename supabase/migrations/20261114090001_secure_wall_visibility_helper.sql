@@ -3,6 +3,9 @@ drop policy if exists "Wall posts visible by privacy" on public.wall_posts;
 drop policy if exists "Visible wall media" on public.wall_post_media;
 drop policy if exists "Visible wall likes" on public.wall_post_likes;
 drop policy if exists "Visible wall comments" on public.wall_post_comments;
+drop policy if exists "Users like visible wall posts" on public.wall_post_likes;
+drop policy if exists "Users comment on visible wall posts" on public.wall_post_comments;
+drop policy if exists "Users edit own wall comments" on public.wall_post_comments;
 drop policy if exists "Wall media visible with post privacy" on storage.objects;
 drop function if exists public.can_view_wall_post(uuid,uuid);
 
