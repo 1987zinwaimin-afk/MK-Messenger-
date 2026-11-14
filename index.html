@@ -153,6 +153,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 
  .profile-editor{max-width:100%}
 }
+.security-card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:14px;margin:10px 0;display:grid;gap:9px}.security-card input{min-height:44px}.security-card button{justify-self:start}
 #notice{margin:12px 0;padding:10px 12px;border-radius:10px;background:#fff5dc;color:#694d12;display:none}
 .empty{margin:auto;text-align:center;padding:32px;color:var(--muted)}.hidden{display:none!important}
 @media(max-width:760px){header{padding:0 12px}.wrap{margin:0 auto}.layout{display:flex;flex-direction:column}.side{min-height:calc(100dvh - 100px)}.main{min-height:0;height:calc(100dvh - 86px)}#messages{max-height:none}.auth{margin:4vh 14px}}
@@ -172,7 +173,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <p class="small muted">New accounts may need to confirm their email before signing in. Use the username field when registering.</p>
 </div></section>
 <section id="app">
-<nav class="tabs" id="menuPanel"><button class="active" data-tab="chats">Chats</button><button data-tab="friends">Find people</button><button data-tab="requests">Requests</button><button data-tab="profile">My profile</button><button id="logout" class="secondary hidden menu-logout" type="button">Log out</button></nav>
+<nav class="tabs" id="menuPanel"><button class="active" data-tab="chats">Chats</button><button data-tab="friends">Find people</button><button data-tab="requests">Requests</button><button data-tab="profile">My profile</button><button data-tab="security">Security</button><button id="logout" class="secondary hidden menu-logout" type="button">Log out</button></nav>
 <div class="layout">
 <aside class="panel side">
 <div id="tab-chats"><div class="section-title chatlist-heading"><span>Conversations</span><button id="createGroupBtn" class="secondary" type="button">+ Group</button></div><div id="chatlist" class="muted small">Loading…</div></div>
@@ -199,6 +200,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <div class="row"><button id="saveprofile" class="grow">Save profile</button></div>
 <div class="share-card"><b>My profile QR</b><div id="profileQr"></div><div class="row"><button id="copyProfileLink" class="secondary grow">Copy profile link</button><button id="shareProfileLink" class="gold grow">Share</button></div></div>
 </div></div>
+<div id="tab-security" class="hidden"><div class="section-title">Account security</div><div class="security-card"><b>Signed-in account</b><div id="securityEmail" class="small muted">Loading account…</div><div id="securitySession" class="small muted"></div><div id="securityDevice" class="small muted"></div></div><div class="security-card"><b>Change password</b><p class="small muted">Use at least 8 characters. Your current account and chat data will remain unchanged.</p><input id="newPassword" type="password" minlength="8" autocomplete="new-password" placeholder="New password (at least 8 characters)"><input id="confirmPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Confirm new password"><button id="changePasswordBtn" class="gold" type="button">Update password</button></div><div class="security-card"><b>Other signed-in devices</b><p class="small muted">Sign out other sessions while keeping this device signed in. Supabase may allow existing access tokens to remain valid until they expire.</p><button id="signOutOthersBtn" class="secondary" type="button">Sign out other devices</button></div></div>
 </aside>
 <main class="panel main" id="chatPanel">
 <div class="chathead"><button id="backToChats" class="secondary back-chat" type="button">← Back</button><span id="chatname">Select a conversation</span><span id="onlineStatus"></span><button id="blockUserBtn" class="secondary safety-btn hidden" type="button">Block</button><button id="reportUserBtn" class="secondary safety-btn hidden" type="button">Report</button><button id="groupInfoBtn" class="secondary hidden" type="button" aria-label="Group settings">⚙</button></div>
@@ -286,6 +288,30 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  async function boot(){sb=client();if(!sb)return;const {data:{session}}=await sb.auth.getSession();if(session){user=session.user;await enter();}sb.auth.onAuthStateChange(async(_event,session)=>{user=session?.user||null;if(user){await enter();}else{showAuth();}});}
  function showAuth(){$('auth').style.display='block';$('app').style.display='none';$('logout').classList.add('hidden');$('who').textContent='';}
  async function enter(){clearNote();$('auth').style.display='none';$('app').style.display='block';$('logout').classList.remove('hidden');try{await refreshProfile();await loadChats();await loadRequests();await setupInboxChannel();}catch(e){note(e.message||String(e));}}
+ async function refreshSecurityPanel(){
+  if(!user||!sb)return;
+  $('securityEmail').textContent=user.email||'Email not available';
+  $('securityDevice').textContent='This device: '+(navigator.userAgent||'Browser').slice(0,140);
+  const {data:{session},error}=await sb.auth.getSession();
+  if(error){$('securitySession').textContent='Could not read session details: '+error.message;return;}
+  $('securitySession').textContent=session?.expires_at?'Current session expires: '+new Date(session.expires_at*1000).toLocaleString():'Current session is active';
+ }
+ async function changeAccountPassword(){
+  const password=$('newPassword').value,confirmPassword=$('confirmPassword').value;
+  if(password.length<8)return note('Password must contain at least 8 characters.');
+  if(password!==confirmPassword)return note('The password confirmation does not match.');
+  $('changePasswordBtn').disabled=true;
+  try{const {error}=await sb.auth.updateUser({password});if(error)throw error;$('newPassword').value='';$('confirmPassword').value='';note('Password updated successfully.');}
+  catch(e){note('Could not update password: '+(e.message||String(e)));}
+  finally{$('changePasswordBtn').disabled=false;}
+ }
+ async function signOutOtherDevices(){
+  if(!confirm('Sign out all other devices and keep this device signed in?'))return;
+  $('signOutOthersBtn').disabled=true;
+  try{const {error}=await sb.auth.signOut({scope:'others'});if(error)throw error;note('A request to sign out other sessions was completed. This device remains signed in.');await refreshSecurityPanel();}
+  catch(e){note('Could not sign out other devices: '+(e.message||String(e)));}
+  finally{$('signOutOthersBtn').disabled=false;}
+ }
  async function doAuth(kind){clearNote();const email=$('email').value.trim(),password=$('password').value,username=$('username').value.trim();if(!email||!password)return note('Enter your email and password.');if(kind==='signup'&&!/^[a-zA-Z0-9_]{3,24}$/.test(username))return note('Choose a username using 3–24 letters, numbers or underscores.');let result;
  if(kind==='signup')result=await sb.auth.signUp({email,password,options:{data:{username,display_name:username}}});
  else result=await sb.auth.signInWithPassword({email,password});
@@ -794,8 +820,9 @@ async function uploadAvatar(){if(!cropSourceImage||!cropSourceFile)return;
 }
 async function saveProfile(){const username=$('myusername').value.trim();if(!/^[a-zA-Z0-9_]{3,24}$/.test(username))return note('Username must be 3–24 letters, numbers or underscores.');const website=$('website').value.trim();const {error}=await sb.from('profiles').update({username,display_name:$('displayname').value.trim(),bio:$('bio').value.trim(),location:$('location').value.trim(),website,profile_visibility:$('profileVisibility').value,updated_at:new Date().toISOString()}).eq('id',user.id);if(error)return note(error.message);await refreshProfile();note('Profile saved.');}
 function closeChat(){if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();currentConversation=null;currentConversationKind='direct';currentPeerId=null;blockedByMe=false;blockedByPeer=false;$('blockUserBtn').classList.add('hidden');$('reportUserBtn').classList.add('hidden');$('groupInfoBtn').classList.add('hidden');$('chatname').textContent='Select a conversation';document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('likeBtn').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
-function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();}
+function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile','security'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();if(tab==='security')refreshSecurityPanel();}
  $('enableNotifications').onclick=enableBrowserNotifications;
+ $('changePasswordBtn').onclick=changeAccountPassword;$('signOutOthersBtn').onclick=signOutOtherDevices;
  $('groupInfoBtn').onclick=openGroupManage;
  $('blockUserBtn').onclick=toggleCurrentBlock;$('reportUserBtn').onclick=openReport;$('cancelReport').onclick=closeReport;$('submitReport').onclick=submitUserReport;$('reportOverlay').addEventListener('click',e=>{if(e.target===$('reportOverlay'))closeReport();});
  $('closeGroupManage').onclick=closeGroupManage;
