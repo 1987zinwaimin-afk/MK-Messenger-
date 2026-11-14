@@ -214,6 +214,50 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 #notice{margin:12px 0;padding:10px 12px;border-radius:10px;background:#fff5dc;color:#694d12;display:none}
 .empty{margin:auto;text-align:center;padding:32px;color:var(--muted)}.hidden{display:none!important}
 @media(max-width:760px){header{padding:0 12px}.wrap{margin:0 auto}.layout{display:flex;flex-direction:column}.side{min-height:calc(100dvh - 100px)}.main{min-height:0;height:calc(100dvh - 86px)}#messages{max-height:none}.auth{margin:4vh 14px}}
+
+/* Wall refinement: compact mobile-first profile and composer */
+.wall-panel{padding:16px 18px 24px}.wall-shell{max-width:700px;gap:13px}
+.wall-page-head{align-items:center;padding:2px 2px 3px}.wall-heading-copy{min-width:0}
+.wall-page-head .section-title{font-size:23px;letter-spacing:-.35px}.wall-page-head .small{font-size:13px}
+.wall-public-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:8px 11px;background:linear-gradient(135deg,#fff8e7,#f8edcf);border-color:#ead49d}
+.wall-profile-card{grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:15px 17px;border-radius:17px}
+.wall-profile-row{min-width:0;gap:13px}.wall-avatar-wrap{width:66px;height:66px;flex:none;position:relative}
+.wall-avatar,.wall-avatar-fallback{width:66px;height:66px;border-radius:50%;border:2px solid var(--gold)}
+.wall-avatar-fallback{font-size:22px;background:linear-gradient(145deg,#eef3fa,#dce5f1);box-shadow:inset 0 1px 4px #fff}
+.wall-profile-identity{min-width:0;display:grid;gap:2px}.wall-profile-identity>b{font-size:16px;color:var(--navy);overflow-wrap:anywhere}
+.wall-profile-identity .small{font-size:12px}.wall-profile-caption{font-size:10px;color:#8a96a8;margin-top:2px}
+.wall-stats{gap:0;border:0;border-left:1px solid var(--line);padding:0 0 0 13px}
+.wall-stat{min-width:62px!important;padding:2px 8px}.wall-stat b{font-size:19px;line-height:1.15}.wall-stat span{font-size:10px;letter-spacing:.2px}
+.wall-composer-card{padding:16px;border-radius:17px;gap:13px}
+.wall-composer-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.wall-composer-heading .wall-card-title{font-size:17px}.wall-composer-heading .small{font-size:11px;margin-top:2px}
+.wall-compose-mark{width:34px;height:34px;display:grid;place-items:center;flex:none;border-radius:11px;background:#fbf2dc;color:#9b742d;font-size:18px}
+#wallPostText{min-height:106px;height:106px;max-height:220px;resize:vertical;border:1px solid #dfe5ed;border-radius:13px;padding:13px 14px;font-size:14px;line-height:1.5;background:#fbfcfe;box-shadow:inset 0 1px 2px #102b4d05}
+#wallPostText:focus{outline:0;border-color:#d6b15e;box-shadow:0 0 0 3px #e5bd6825;background:#fff}
+.wall-composer-tools{align-items:center;gap:10px}.wall-media-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:9px 13px;border:1px solid #e4e9f0;background:#f3f6fa;font-size:13px}
+.wall-privacy-label{display:grid;gap:4px;min-width:0;font-size:10px;font-weight:700;color:#78859a}
+.wall-privacy-label select{width:100%;min-width:154px;min-height:39px;padding:7px 10px;border-radius:10px;font-size:12px;color:var(--ink);background:#fff}
+.wall-publish{min-height:46px;border-radius:11px;font-size:14px;font-weight:800;box-shadow:0 4px 10px #d7b35b30;letter-spacing:.1px}
+.wall-empty{display:grid;justify-items:center;gap:6px;padding:27px 16px;border-radius:16px;font-size:13px;line-height:1.45}
+.wall-empty b{color:var(--navy);font-size:14px}.wall-empty span{max-width:300px}
+.wall-empty-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:50%;background:#fbf2dc;color:#98712a;font-size:18px;margin-bottom:2px}
+@media(max-width:760px){
+ .wall-panel{padding:10px 10px 22px}.wall-shell{gap:11px}.wall-page-head{gap:7px}
+ .wall-page-head .section-title{font-size:20px}.wall-page-head .small{font-size:11px}
+ .wall-public-pill{font-size:9px;padding:6px 8px}
+ .wall-profile-card{grid-template-columns:minmax(0,1fr) auto;padding:12px;gap:7px}
+ .wall-profile-row{gap:9px}.wall-avatar-wrap,.wall-avatar,.wall-avatar-fallback{width:54px;height:54px}
+ .wall-avatar-fallback{font-size:18px}.wall-profile-identity>b{font-size:14px}
+ .wall-profile-caption{font-size:9px}.wall-stats{padding-left:7px}
+ .wall-stat{min-width:49px!important;padding:2px 4px}.wall-stat b{font-size:17px}.wall-stat span{font-size:9px}
+ .wall-composer-card{padding:13px;gap:11px}.wall-composer-heading .wall-card-title{font-size:16px}
+ .wall-composer-heading .small{font-size:10px}.wall-compose-mark{width:30px;height:30px}
+ #wallPostText{height:100px;min-height:100px;font-size:14px;padding:12px}
+ .wall-composer-tools{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:end;gap:9px}
+ .wall-media-button{min-height:40px;padding:8px 10px;font-size:11px;white-space:nowrap}
+ .wall-privacy-label{font-size:9px}.wall-privacy-label select{min-width:0;min-height:40px;font-size:11px;padding:7px 8px}
+ .wall-publish{min-height:44px;font-size:13px}.wall-empty{padding:23px 13px}
+}
 </style>
 </head>
 <body>
@@ -330,29 +374,31 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <section id="wallPanel" class="panel hidden wall-panel">
  <div class="wall-shell">
   <div class="wall-page-head">
-   <div><div class="section-title" id="wallHeading">My Wall</div><div class="small muted" id="wallSubheading">Share your moments with friends</div></div>
-   <span class="wall-public-pill">🌐 Public by default</span>
+   <div class="wall-heading-copy"><div class="section-title" id="wallHeading">My Wall</div><div class="small muted" id="wallSubheading">Share your moments with friends</div></div>
+   <span class="wall-public-pill"><span>🌐</span> Public by default</span>
   </div>
-  <div id="wallProfileCard" class="wall-card">
+  <div id="wallProfileCard" class="wall-card wall-profile-card">
    <div class="wall-profile-row">
-    <img id="wallAvatar" class="wall-avatar hidden" alt="Your profile photo">
-    <div id="wallAvatarFallback" class="wall-avatar-fallback">MK</div>
-    <div class="grow"><b id="wallDisplayName">My Profile</b><div class="small muted" id="wallUsername">@username</div></div>
+    <div class="wall-avatar-wrap"><img id="wallAvatar" class="wall-avatar hidden" alt="Your profile photo"><div id="wallAvatarFallback" class="wall-avatar-fallback">MK</div></div>
+    <div class="wall-profile-identity"><b id="wallDisplayName">My Profile</b><div class="small muted" id="wallUsername">@username</div><span class="wall-profile-caption">Your personal space on MK Messenger</span></div>
    </div>
-   <div class="wall-stats"><div><b id="wallPostCount">0</b><span>Posts</span></div><div><b id="wallFriendCount">0</b><span>Friends</span></div></div>
+   <div class="wall-stats">
+    <div class="wall-stat"><b id="wallPostCount">0</b><span>Posts</span></div>
+    <div class="wall-stat"><b id="wallFriendCount">0</b><span>Friends</span></div>
+   </div>
   </div>
-  <div id="wallComposer" class="wall-card">
-   <div class="wall-card-title">Create a Post</div>
-   <textarea id="wallPostText" maxlength="5000" placeholder="What's on your mind?" rows="3"></textarea>
+  <div id="wallComposer" class="wall-card wall-composer-card">
+   <div class="wall-composer-heading"><div><div class="wall-card-title">Create a Post</div><div class="small muted">Share a thought, photo or video with your friends</div></div><span class="wall-compose-mark">✦</span></div>
+   <textarea id="wallPostText" maxlength="5000" placeholder="What's on your mind?" rows="3" aria-label="Write a post"></textarea>
    <input id="wallMediaInput" class="hidden" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" multiple>
    <div id="wallMediaPreview" class="wall-media-preview"></div>
    <div class="wall-composer-tools">
-    <button id="wallAddMedia" class="secondary" type="button">▧ Photo / Video</button>
-    <label class="wall-privacy-label">Post Privacy
+    <button id="wallAddMedia" class="secondary wall-media-button" type="button">▧ <span>Add Photo / Video</span></button>
+    <label class="wall-privacy-label"><span>Post visibility</span>
      <select id="wallPrivacy"><option value="public" selected>🌐 Public</option><option value="friends">👥 Friends Only</option><option value="only_me">🔒 Only Me</option></select>
     </label>
    </div>
-   <button id="wallPublishBtn" class="gold wall-publish" type="button">Create Post</button>
+   <button id="wallPublishBtn" class="gold wall-publish" type="button"><span>Create Post</span></button>
   </div>
   <div id="wallFeedStatus" class="small muted" aria-live="polite"></div>
   <div id="wallPosts" class="wall-post-list"><div class="wall-empty">Loading posts…</div></div>
@@ -1066,6 +1112,25 @@ async function loadWallFeed(mode){
  $('wallFeedStatus').textContent='Loading posts…';
  $('wallPosts').innerHTML='<div class="wall-empty">Loading posts…</div>';
  try{
+  if(!isActivity){
+   if(!profile)await refreshProfile();
+   const displayName=profile?.display_name||profile?.username||user.user_metadata?.username||user.email?.split('@')[0]||'My Profile';
+   const username=profile?.username||user.user_metadata?.username||user.email?.split('@')[0]||'member';
+   $('wallDisplayName').textContent=displayName;
+   $('wallUsername').textContent='@'+username;
+   $('wallAvatar').classList.toggle('hidden',!profile?.avatar_url);
+   $('wallAvatarFallback').classList.toggle('hidden',!!profile?.avatar_url);
+   if(profile?.avatar_url)$('wallAvatar').src=profile.avatar_url;
+   $('wallAvatarFallback').textContent=initials(displayName);
+   const [postCountResult,friendResult]=await Promise.all([
+    sb.from('wall_posts').select('id',{count:'exact',head:true}).eq('author_id',user.id),
+    sb.from('friend_requests').select('sender_id,receiver_id').eq('status','accepted').or('sender_id.eq.'+user.id+',receiver_id.eq.'+user.id)
+   ]);
+   if(postCountResult.error)throw postCountResult.error;
+   if(friendResult.error)throw friendResult.error;
+   $('wallPostCount').textContent=String(postCountResult.count||0);
+   $('wallFriendCount').textContent=String(friendResult.data?.length||0);
+  }
   let authorIds=[user.id];
   if(isActivity){
    const fr=await sb.from('friend_requests').select('sender_id,receiver_id').eq('status','accepted').or('sender_id.eq.'+user.id+',receiver_id.eq.'+user.id);
@@ -1079,7 +1144,7 @@ async function loadWallFeed(mode){
   else if(isActivity)postQuery=postQuery.in('author_id',authorIds);
   else postQuery=postQuery.eq('author_id',user.id);
   const {data:posts,error}=await postQuery;if(error)throw error;
-  if(!posts?.length){$('wallPosts').innerHTML='<div class="wall-empty">'+(isActivity?'Your friends have not shared any posts yet.':'Your Wall is empty. Create your first post above.')+'</div>';$('wallFeedStatus').textContent='';$('wallPostCount').textContent='0';return;}
+  if(!posts?.length){$('wallPosts').innerHTML='<div class="wall-empty"><div class="wall-empty-icon">✦</div><b>'+(isActivity?'Nothing here yet':'Your story starts here')+'</b><span>'+(isActivity?'Your friends have not shared any posts yet.':'Your Wall is empty. Share your first moment with friends.')+'</span></div>';$('wallFeedStatus').textContent='';return;}
   const ids=posts.map(p=>p.id),authors=[...new Set(posts.map(p=>p.author_id))];
   const [profilesResult,mediaResult,likesResult,commentsResult]=await Promise.all([
    sb.from('profiles').select('id,username,display_name,avatar_url').in('id',authors),
@@ -1099,17 +1164,7 @@ async function loadWallFeed(mode){
   }));
   (likesResult.data||[]).forEach(l=>{if(!likeMap.has(l.post_id))likeMap.set(l.post_id,[]);likeMap.get(l.post_id).push(l.user_id);});
   (commentsResult.data||[]).forEach(c=>{if(!commentMap.has(c.post_id))commentMap.set(c.post_id,[]);commentMap.get(c.post_id).push(c);});
-  if(!isActivity){
-   $('wallDisplayName').textContent=profile?.display_name||profile?.username||'My Profile';
-   $('wallUsername').textContent='@'+(profile?.username||'');
-   $('wallAvatar').classList.toggle('hidden',!profile?.avatar_url);
-   $('wallAvatarFallback').classList.toggle('hidden',!!profile?.avatar_url);
-   if(profile?.avatar_url)$('wallAvatar').src=profile.avatar_url;
-   $('wallAvatarFallback').textContent=initials(profile?.display_name||profile?.username||'MK');
-   $('wallPostCount').textContent=String(posts.length);
-   const fr=await sb.from('friend_requests').select('sender_id,receiver_id').eq('status','accepted').or('sender_id.eq.'+user.id+',receiver_id.eq.'+user.id);
-   $('wallFriendCount').textContent=String(fr.data?.length||0);
-  }
+
   $('wallPosts').innerHTML=posts.map(post=>{
    const author=profileMap.get(post.author_id)||{};
    const media=mediaMap.get(post.id)||[];
