@@ -1,0 +1,19 @@
+{
+  "name": "MK Messenger",
+  "short_name": "MK Messenger",
+  "description": "Private messaging with MK Messenger",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0758e8",
+  "theme_color": "#0758e8",
+  "icons": [
+    {
+      "src": "/icons/mk-messenger.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
