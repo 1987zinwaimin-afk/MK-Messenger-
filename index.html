@@ -292,6 +292,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 /* Configure these two values in config.js; never put a service-role key in the browser. */
 </script>
 <script src="./config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 (() => {
@@ -881,36 +882,59 @@ async function uploadAndSend(file){
  appendMessage(data,null,replyTarget?.body||'');$('message').value='';replyTarget=null;showReplyPreview();
 }
  function renderAvatar(url){$('avatarPreview').classList.toggle('hidden',!url);$('avatarFallback').classList.toggle('hidden',!!url);if(url)$('avatarPreview').src=url;}
-let qrScanStream=null,qrScanFrame=0,qrScanDetector=null;
+let qrScanStream=null,qrScanFrame=0,qrScanDetector=null,qrScanBusy=false,qrScanCanvas=null,qrScanContext=null,qrScanLastAttempt=0;
 function stopQrScanner(){
- if(qrScanFrame)cancelAnimationFrame(qrScanFrame);qrScanFrame=0;
+ if(qrScanFrame)cancelAnimationFrame(qrScanFrame);qrScanFrame=0;qrScanBusy=false;
  if(qrScanStream){qrScanStream.getTracks().forEach(t=>t.stop());qrScanStream=null;}
  const video=$('qrScanVideo');if(video){video.pause();video.srcObject=null;}
  $('qrScanOverlay').classList.add('hidden');
 }
+async function handleScannedProfile(raw){
+ let username='';
+ try{const u=new URL(raw,location.origin);username=u.searchParams.get('profile')||'';}catch{}
+ if(!username)username=String(raw||'').replace(/^@/,'').trim();
+ stopQrScanner();
+ if(username){$('search').value=username;setTab('friends');await searchPeople();}
+ else note('This QR code is not an MK Messenger profile link.');
+}
 async function startQrScanner(){
- if(!('BarcodeDetector' in window))return note('QR scanning is not supported by this browser. Please update Chrome or use username search.');
+ if(!navigator.mediaDevices?.getUserMedia)return note('Camera access is not available. Open MK Messenger in Chrome over HTTPS and allow Camera permission.');
  try{
-  qrScanDetector=new BarcodeDetector({formats:['qr_code']});
-  qrScanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
-  const video=$('qrScanVideo');video.srcObject=qrScanStream;await video.play();
-  $('qrScanStatus').textContent='Scanning… Keep the QR code inside the camera frame.';
+  $('qrScanStatus').textContent='Requesting camera permission…';
   $('qrScanOverlay').classList.remove('hidden');
-  const scan=async()=>{if(!qrScanStream)return;try{
-   const codes=await qrScanDetector.detect(video);
-   if(codes.length){const raw=codes[0].rawValue;let username='';
-    try{const u=new URL(raw,location.origin);username=u.searchParams.get('profile')||'';}catch{}
-    if(!username)username=raw.replace(/^@/,'').trim();
-    stopQrScanner();
-    if(username){$('search').value=username;setTab('friends');await searchPeople();}
-    else note('This QR code is not an MK Messenger profile link.');
-    return;
+  qrScanStream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
+  const video=$('qrScanVideo');video.srcObject=qrScanStream;await video.play();
+  qrScanCanvas=document.createElement('canvas');qrScanContext=qrScanCanvas.getContext('2d',{willReadFrequently:true});
+  qrScanDetector=null;
+  if('BarcodeDetector' in window){try{qrScanDetector=new BarcodeDetector({formats:['qr_code']});}catch(err){qrScanDetector=null;}}
+  $('qrScanStatus').textContent='Camera ready. Point it at the QR code and hold steady.';
+  const scan=async()=>{
+   if(!qrScanStream||qrScanBusy)return;
+   if(video.readyState>=2&&Date.now()-qrScanLastAttempt>120){
+    qrScanLastAttempt=Date.now();qrScanBusy=true;
+    try{
+     let raw='';
+     if(qrScanDetector){try{const codes=await qrScanDetector.detect(video);if(codes?.length)raw=codes[0].rawValue||'';}catch(err){qrScanDetector=null;}}
+     if(!raw&&window.jsQR){
+      const w=video.videoWidth,h=video.videoHeight;
+      if(w&&h){qrScanCanvas.width=w;qrScanCanvas.height=h;qrScanContext.drawImage(video,0,0,w,h);
+       const frame=qrScanContext.getImageData(0,0,w,h);
+       const result=jsQR(frame.data,w,h,{inversionAttempts:'attemptBoth'});
+       if(result)raw=result.data;
+      }
+     }
+     if(raw){await handleScannedProfile(raw);return;}
+    }catch(err){$('qrScanStatus').textContent='Scanning… Keep the QR code visible and in focus.';}
+    finally{qrScanBusy=false;}
    }
-  }catch(err){}
-  if(qrScanStream)qrScanFrame=requestAnimationFrame(scan);
+   if(qrScanStream)qrScanFrame=requestAnimationFrame(scan);
   };
+  if(!qrScanDetector&&!window.jsQR){$('qrScanStatus').textContent='QR scanner library did not load. Check your internet connection and reopen this page.';return;}
   qrScanFrame=requestAnimationFrame(scan);
- }catch(err){stopQrScanner();note(err?.name==='NotAllowedError'?'Camera permission denied. Allow camera access and try again.':'Could not start QR scanner: '+(err?.message||'Please try again.'));}
+ }catch(err){
+  stopQrScanner();
+  note(err?.name==='NotAllowedError'?'Camera permission denied. Allow Camera for Chrome in Android Settings, then try again.':err?.name==='NotFoundError'?'No camera was found on this device.':'Could not start QR scanner: '+(err?.message||'Please try again.'));
+ }
 }
 function profileUrl(){return location.origin+location.pathname+'?profile='+encodeURIComponent(profile?.username||'');}
 function renderProfileQr(){const box=$('profileQr');if(!box)return;box.innerHTML='';if(window.QRCode&&profile?.username)new QRCode(box,{text:profileUrl(),width:144,height:144,colorDark:'#081a33',colorLight:'#ffffff'});}
