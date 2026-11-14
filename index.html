@@ -521,7 +521,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  async function refreshProfile(){const {data,error}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();if(error)throw error;profile=data;if(!data){note('Your profile is not ready yet. Please sign out and sign in again, or check the database setup.');return;}$('who').textContent='@'+data.username;$('myusername').value=data.username;$('displayname').value=data.display_name||'';$('bio').value=data.bio||'';$('location').value=data.location||'';$('website').value=data.website||'';$('profileVisibility').value=data.profile_visibility||'everyone';renderAvatar(data.avatar_url);renderProfileQr();}
  async function boot(){sb=client();if(!sb)return;const {data:{session}}=await sb.auth.getSession();if(session){user=session.user;await enter();}sb.auth.onAuthStateChange(async(_event,session)=>{user=session?.user||null;if(user){await enter();}else{showAuth();}});}
  function showAuth(){$('auth').style.display='block';$('app').style.display='none';$('logout').classList.add('hidden');$('who').textContent='';}
- async function enter(){clearNote();$('auth').style.display='none';$('app').style.display='block';$('logout').classList.remove('hidden');try{await refreshProfile();await loadChats();await loadRequests();await setupInboxChannel();if(new URLSearchParams(location.search).has('post'))setTab('wall');}catch(e){note(e.message||String(e));}}
+ async function enter(){clearNote();$('auth').style.display='none';$('app').style.display='block';$('logout').classList.remove('hidden');try{await refreshProfile();await loadChats();await loadRequests();await setupInboxChannel();await syncPushButton();if(new URLSearchParams(location.search).has('post'))setTab('wall');}catch(e){note(e.message||String(e));}}
  async function refreshSecurityPanel(){
   if(!user||!sb)return;
   $('securityEmail').textContent=user.email||'Email not available';
@@ -613,13 +613,67 @@ async function setChatPreference(conversationId,patch){
    }
   }).subscribe();
 }
-async function enableBrowserNotifications(){
- if(!('Notification' in window))return note('This browser does not support notifications.');
+function vapidKeyBytes(value){
+ const padding='='.repeat((4-value.length%4)%4);
+ const base64=(value+padding).replace(/-/g,'+').replace(/_/g,'/');
+ const raw=atob(base64),bytes=new Uint8Array(raw.length);
+ for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+ return bytes;
+}
+async function syncPushButton(){
+ const button=$('enableNotifications');
+ if(!button)return;
+ if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){
+  button.textContent='🔔 Push unavailable';button.disabled=true;return;
+ }
  try{
-  const permission=await Notification.requestPermission();
-  if(permission==='granted'){ $('enableNotifications').textContent='🔔 Notifications on';note('Notifications enabled while MK Messenger is open.');}
-  else note('Notification permission was not granted. You can enable it in browser settings.');
- }catch(e){note('Could not request notification permission: '+(e.message||String(e)));}
+  const registration=await navigator.serviceWorker.ready;
+  const subscription=await registration.pushManager.getSubscription();
+  button.textContent=subscription?'🔔 Push enabled':'🔔 Enable notifications';
+ }catch(_){button.textContent='🔔 Enable notifications';}
+}
+async function enableBrowserNotifications(){
+ if(!user||!sb)return note('Sign in before enabling notifications.');
+ if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))return note('This browser does not support Web Push notifications.');
+ if(!cfg.vapidPublicKey)return note('Web Push is not configured yet. The public VAPID key must be added to config.js after the server key is safely configured.');
+ const button=$('enableNotifications');button.disabled=true;
+ try{
+  const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
+  if(permission!=='granted')return note('Notification permission was not granted. You can enable it in browser settings.');
+  const registration=await navigator.serviceWorker.ready;
+  let subscription=await registration.pushManager.getSubscription();
+  if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidKeyBytes(cfg.vapidPublicKey)});
+  const json=subscription.toJSON();
+  if(!json.endpoint||!json.keys?.p256dh||!json.keys?.auth)throw new Error('The browser returned an incomplete push subscription.');
+  const {error}=await sb.from('push_subscriptions').upsert({
+   user_id:user.id,endpoint:json.endpoint,p256dh:json.keys.p256dh,auth:json.keys.auth,updated_at:new Date().toISOString()
+  },{onConflict:'user_id,endpoint'});
+  if(error)throw error;
+  button.textContent='🔔 Push enabled';note('Push notifications are registered on this device. Server delivery will activate after VAPID sender setup.');
+ }catch(e){note('Could not enable push notifications: '+(e.message||String(e)));}
+ finally{button.disabled=false;await syncPushButton();}
+}
+async function disableBrowserNotifications(){
+ if(!user||!sb)return;
+ const button=$('enableNotifications');button.disabled=true;
+ try{
+  const registration=await navigator.serviceWorker.ready;
+  const subscription=await registration.pushManager.getSubscription();
+  if(subscription){
+   const endpoint=subscription.endpoint;
+   const {error}=await sb.from('push_subscriptions').delete().eq('user_id',user.id).eq('endpoint',endpoint);
+   if(error)throw error;
+   await subscription.unsubscribe();
+  }
+  button.textContent='🔔 Enable notifications';note('Push notifications disabled on this device.');
+ }catch(e){note('Could not disable push notifications: '+(e.message||String(e)));}
+ finally{button.disabled=false;await syncPushButton();}
+}
+async function togglePushNotifications(){
+ const registration=await navigator.serviceWorker.ready;
+ const subscription=await registration.pushManager.getSubscription();
+ if(subscription)return disableBrowserNotifications();
+ return enableBrowserNotifications();
 }
 async function openGroupCreator(){
   $('groupTitle').value='';$('groupFriends').innerHTML='<div class="small muted">Loading friends…</div>';
@@ -1321,7 +1375,7 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
  $('wallAddMedia').onclick=()=>$('wallMediaInput').click();
  $('wallMediaInput').onchange=e=>{const added=Array.from(e.target.files||[]);if(wallSelectedFiles.length+added.length>6){note('You can add up to 6 photos or videos per post.');e.target.value='';return;}wallSelectedFiles.push(...added);wallRenderPreview();e.target.value='';};
  $('wallPublishBtn').onclick=publishWallPost;
- $('enableNotifications').onclick=enableBrowserNotifications;
+ $('enableNotifications').onclick=togglePushNotifications;
  $('toggleArchivedBtn').onclick=()=>{showArchivedChats=!showArchivedChats;loadChats();};
  $('chatSearch').addEventListener('input',()=>{loadChats();if(!$('chatSearch').value.trim())$('messageSearchResults').innerHTML='';});
  $('chatSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchMessages();}});
