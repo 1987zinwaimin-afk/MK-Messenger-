@@ -181,7 +181,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  async function sendRequest(id){const {error}=await sb.from('friend_requests').insert({sender_id:user.id,receiver_id:id});if(error)return note(error.message);note('Friend request sent.');}
  async function acceptRequest(id){const {error}=await sb.rpc('accept_friend_request',{p_request_id:id});if(error)return note(error.message);await loadRequests();await loadChats();note('Friend request accepted.');}
  async function openChat(id,title){
- clearNote();currentConversation=id;document.body.classList.add('mobile-chat-open');$('menuPanel').classList.remove('open');replyTarget=null;showReplyPreview();$('chatname').textContent=title||'Conversation';$('onlineStatus').textContent='';$('typing').textContent='';$('message').disabled=false;$('send').disabled=false;
+ clearNote();currentConversation=id;document.body.classList.add('mobile-chat-open');$('menuPanel').classList.remove('open');replyTarget=null;showReplyPreview();$('chatname').textContent=title||'Conversation';$('onlineStatus').textContent='';$('typing').textContent='';$('message').disabled=false;$('likeBtn').disabled=false;
  if(channel){await sb.removeChannel(channel);channel=null;}
  await loadMessages();
  channel=sb.channel('conversation-'+id,{config:{presence:{key:user.id}}})
@@ -327,7 +327,7 @@ async function uploadAvatar(file){if(!file)return;if(file.size>5*1024*1024)retur
  const {data}=sb.storage.from('profile-avatars').getPublicUrl(path);const {error}=await sb.from('profiles').update({avatar_url:data.publicUrl,updated_at:new Date().toISOString()}).eq('id',user.id);if(error)return note(error.message);await refreshProfile();note('Profile photo updated.');
 }
 async function saveProfile(){const username=$('myusername').value.trim();if(!/^[a-zA-Z0-9_]{3,24}$/.test(username))return note('Username must be 3–24 letters, numbers or underscores.');const website=$('website').value.trim();const {error}=await sb.from('profiles').update({username,display_name:$('displayname').value.trim(),bio:$('bio').value.trim(),location:$('location').value.trim(),website,profile_visibility:$('profileVisibility').value,updated_at:new Date().toISOString()}).eq('id',user.id);if(error)return note(error.message);await refreshProfile();note('Profile saved.');}
-function closeChat(){currentConversation=null;document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('send').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
+function closeChat(){currentConversation=null;document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('likeBtn').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
 function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();}
  $('signin').onclick=()=>doAuth('signin');$('signup').onclick=()=>doAuth('signup');$('logout').onclick=async()=>{if(channel)await sb.removeChannel(channel);await sb.auth.signOut();showAuth();};$('searchbtn').onclick=searchPeople;$('sendform').onsubmit=sendMessage;$('saveprofile').onclick=saveProfile;
  $('menuToggle').onclick=()=>$('menuPanel').classList.toggle('open');
