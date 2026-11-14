@@ -678,7 +678,8 @@ async function sendTyping(){if(!channel||!currentConversation)return;const now=D
 
  async function forwardMessage(m){
  if(!currentConversation)return;
- if(m.message_type!=='text')return note('Forwarding attachments is not enabled yet. Text messages can be forwarded.');
+ const supported=['text','image','video','file','audio'];
+ if(!supported.includes(m.message_type))return note('This message type cannot be forwarded.');
  const {data:members,error}=await sb.from('conversation_members').select('conversation_id,user_id,profiles(username,display_name),conversations(id,kind,title)').eq('user_id',user.id);
  if(error)return note('Could not load conversations: '+error.message);
  const ids=[...new Set((members||[]).map(r=>r.conversation_id))].filter(id=>id!==currentConversation);
@@ -686,12 +687,27 @@ async function sendTyping(){if(!channel||!currentConversation)return;const now=D
  const details=await sb.from('conversation_members').select('conversation_id,user_id,profiles(username,display_name),conversations(id,kind,title)').in('conversation_id',ids);
  if(details.error)return note('Could not load target conversations: '+details.error.message);
  const options=ids.map(id=>{const group=details.data?.find(r=>r.conversation_id===id&&r.conversations?.kind==='group')?.conversations;if(group)return {id,label:group.title||'Group chat'};const peer=details.data?.find(r=>r.conversation_id===id&&r.user_id!==user.id)?.profiles;return {id,label:peer?.display_name||peer?.username||'Direct chat'};});
- const promptText=options.map((o,i)=>(i+1)+'. '+o.label).join('\n');
- const answer=prompt('Forward this text message to which conversation? Enter a number:\n'+promptText);
+ const promptText=options.map((o,i)=>(i+1)+'. '+o.label).join('\\n');
+ const answer=prompt('Forward this '+(m.message_type==='text'?'message':'attachment')+' to which conversation? Enter a number:\\n'+promptText);
  if(answer===null)return;
  const choice=Number(answer);if(!Number.isInteger(choice)||choice<1||choice>options.length)return note('Choose a valid conversation number.');
  const target=options[choice-1];
- const {error:sendError}=await sb.from('messages').insert({conversation_id:target.id,sender_id:user.id,body:'↪ Forwarded message\n'+m.body,message_type:'text'});
+ const payload={conversation_id:target.id,sender_id:user.id,message_type:m.message_type};
+ if(m.message_type==='text')payload.body='↪ Forwarded message\\n'+(m.body||'');
+ else{
+  if(!m.body)return note('The attachment path is missing; this message cannot be forwarded.');
+  const filename=m.body.split('/').pop()||('attachment-'+m.message_type);
+  const newPath=target.id+'/'+crypto.randomUUID()+'-'+filename;
+  const {error:copyError}=await sb.storage.from('chat-media').copy(m.body,newPath);
+  if(copyError)return note('Could not copy attachment to the selected chat: '+copyError.message);
+  payload.body=newPath;
+  if(m.message_type==='audio'&&m.audio_duration_seconds)payload.audio_duration_seconds=m.audio_duration_seconds;
+  const {error:sendError}=await sb.from('messages').insert(payload);
+  if(sendError){await sb.storage.from('chat-media').remove([newPath]);return note('Could not forward attachment: '+sendError.message);}
+  note('Attachment forwarded to '+target.label+'.');
+  return;
+ }
+ const {error:sendError}=await sb.from('messages').insert(payload);
  if(sendError)return note('Could not forward message: '+sendError.message);
  note('Message forwarded to '+target.label+'.');
 }
