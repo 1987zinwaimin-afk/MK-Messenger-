@@ -183,7 +183,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <nav class="tabs" id="menuPanel"><button class="active" data-tab="chats">Chats</button><button data-tab="friends">Find people</button><button data-tab="requests">Requests</button><button data-tab="profile">My profile</button><button data-tab="security">Security</button><button id="logout" class="secondary hidden menu-logout" type="button">Log out</button></nav>
 <div class="layout">
 <aside class="panel side">
-<div id="tab-chats"><div class="section-title chatlist-heading"><span id="chatListTitle">Conversations</span><button id="toggleArchivedBtn" class="secondary" type="button">Archived</button><button id="createGroupBtn" class="secondary" type="button">+ Group</button></div><input id="chatSearch" type="search" placeholder="Search conversations" aria-label="Search conversations"><input id="messageSearch" type="search" placeholder="Search messages…" aria-label="Search messages"><div id="messageSearchResults" class="small"></div><div id="chatlist" class="muted small">Loading…</div></div>
+<div id="tab-chats"><div class="section-title chatlist-heading"><span id="chatListTitle">Conversations</span><button id="toggleArchivedBtn" class="secondary" type="button">Archived</button><button id="createGroupBtn" class="secondary" type="button">+ Group</button></div><input id="chatSearch" type="search" placeholder="Search conversations or messages…" aria-label="Search conversations or messages"><div id="messageSearchResults" class="small"></div><div id="chatlist" class="muted small">Loading…</div></div>
 <div id="tab-friends" class="hidden"><div class="section-title">Find people</div><div class="row"><input id="search" placeholder="Search username"><button id="searchbtn">Find</button></div><div id="searchresults"></div></div>
 <div id="tab-requests" class="hidden"><div class="section-title">Friend requests</div><div id="requestslist" class="muted small">Loading…</div></div>
 <div id="tab-profile" class="hidden"><div class="section-title">My profile</div>
@@ -357,7 +357,7 @@ async function setChatPreference(conversationId,patch){
  chatPreferences.set(conversationId,data);await loadChats();note('Conversation updated.');
  }
  async function searchMessages(){
-  const term=$('messageSearch').value.trim();$('messageSearchResults').innerHTML='';if(term.length<2)return;
+  const term=$('chatSearch').value.trim();$('messageSearchResults').innerHTML='';if(term.length<2)return;
   const {data:members,error:memberError}=await sb.from('conversation_members').select('conversation_id').eq('user_id',user.id);
   if(memberError)return note('Search failed: '+memberError.message);
   const ids=[...new Set((members||[]).map(x=>x.conversation_id))];if(!ids.length)return;
@@ -896,9 +896,8 @@ function closeChat(){if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVo
 function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile','security'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();if(tab==='security')refreshSecurityPanel();}
  $('enableNotifications').onclick=enableBrowserNotifications;
  $('toggleArchivedBtn').onclick=()=>{showArchivedChats=!showArchivedChats;loadChats();};
- $('chatSearch').addEventListener('input',()=>loadChats());
- $('messageSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchMessages();}});
- $('messageSearch').addEventListener('input',()=>{if(!$('messageSearch').value.trim())$('messageSearchResults').innerHTML='';});
+ $('chatSearch').addEventListener('input',()=>{loadChats();if(!$('chatSearch').value.trim())$('messageSearchResults').innerHTML='';});
+ $('chatSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchMessages();}});
  $('changePasswordBtn').onclick=changeAccountPassword;$('signOutOthersBtn').onclick=signOutOtherDevices;
  $('groupInfoBtn').onclick=openGroupManage;
  $('blockUserBtn').onclick=toggleCurrentBlock;$('reportUserBtn').onclick=openReport;$('cancelReport').onclick=closeReport;$('submitReport').onclick=submitUserReport;$('reportOverlay').addEventListener('click',e=>{if(e.target===$('reportOverlay'))closeReport();});
