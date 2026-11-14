@@ -47,7 +47,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 }
 #notice{margin:12px 0;padding:10px 12px;border-radius:10px;background:#fff5dc;color:#694d12;display:none}
 .empty{margin:auto;text-align:center;padding:32px;color:var(--muted)}.hidden{display:none!important}
-@media(max-width:760px){header{padding:0 14px}.wrap{margin:12px auto}.layout{grid-template-columns:1fr}.side{min-height:230px}.main{min-height:60vh}#messages{max-height:48vh}.auth{margin:4vh 14px}}
+@media(max-width:760px){header{padding:0 12px}.wrap{margin:0 auto}.layout{display:flex;flex-direction:column}.side{min-height:calc(100dvh - 100px)}.main{min-height:0;height:calc(100dvh - 86px)}#messages{max-height:none}.auth{margin:4vh 14px}}
 </style>
 </head>
 <body>
@@ -119,12 +119,14 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  }
  async function loadChats(){
  const {data,error}=await sb.from('conversation_members').select('conversation_id,user_id,profiles(id,username,display_name,avatar_url),conversations(id,kind,title,created_at)').eq('user_id',user.id);
- if(error)throw error;const rows=data||[],direct=rows.filter(x=>x.conversations?.kind==='direct'),ids=direct.map(x=>x.conversations).filter(Boolean);
+ if(error)throw error;const {data:friendRows,error:friendError}=await sb.from('friend_requests').select('sender_id,receiver_id').eq('status','accepted').or('sender_id.eq.'+user.id+',receiver_id.eq.'+user.id);
+ if(friendError)throw friendError;const acceptedIds=new Set((friendRows||[]).map(r=>r.sender_id===user.id?r.receiver_id:r.sender_id));
+ const rows=data||[],direct=rows.filter(x=>x.conversations?.kind==='direct'),ids=direct.map(x=>x.conversations).filter(Boolean);
  const people=await Promise.all(ids.map(async c=>{const members=rows.filter(x=>x.conversation_id===c.id);let other=members.find(x=>x.user_id!==user.id)?.profiles;
  if(!other){const q=await sb.from('conversation_members').select('user_id,profiles(id,username,display_name,avatar_url)').eq('conversation_id',c.id).neq('user_id',user.id).maybeSingle();other=q.data?.profiles||null;}
- return {c,other};}));
+ if(other&&!acceptedIds.has(other.id))return null;return {c,other};}));
  const groups=rows.filter(x=>x.conversations?.kind==='group').map(x=>({c:x.conversations,other:null}));
- const list=[...people,...groups];$('chatlist').innerHTML=list.length?list.map(({c,other})=>{const name=other?.display_name||other?.username||c.title||'Direct chat',avatar=other?.avatar_url?'<img src="'+esc(other.avatar_url)+'" alt="" class="avatar-img">':'<div class="avatar">'+initials(name)+'</div>';return '<div class="chatitem '+(currentConversation===c.id?'active':'')+'" data-id="'+c.id+'" data-title="'+esc(name)+'">'+avatar+'<div class="person-meta"><b>'+esc(name)+'</b><div class="small muted">'+(other?.username?'@'+esc(other.username):esc(c.kind))+'</div></div></div>';}).join(''):'No friends yet. Find people and add a friend to start chatting.';
+ const list=[...people.filter(Boolean),...groups];$('chatlist').innerHTML=list.length?list.map(({c,other})=>{const name=other?.display_name||other?.username||c.title||'Direct chat',avatar=other?.avatar_url?'<img src="'+esc(other.avatar_url)+'" alt="" class="avatar-img">':'<div class="avatar">'+initials(name)+'</div>';return '<div class="chatitem '+(currentConversation===c.id?'active':'')+'" data-id="'+c.id+'" data-title="'+esc(name)+'">'+avatar+'<div class="person-meta"><b>'+esc(name)+'</b><div class="small muted">'+(other?.username?'@'+esc(other.username):esc(c.kind))+'</div></div></div>';}).join(''):'No friends yet. Find people and add a friend to start chatting.';
  $('chatlist').querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>openChat(el.dataset.id,el.dataset.title));
 }
  async function loadRequests(){const {data,error}=await sb.from('friend_requests').select('id,sender_id,receiver_id,status,profiles!friend_requests_sender_id_fkey(username,display_name)').eq('receiver_id',user.id).eq('status','pending');if(error){$('requestslist').textContent=error.message;return;}$('requestslist').innerHTML=(data||[]).length?data.map(r=>`<div class="person"><div class="avatar">${initials(r.profiles?.username)}</div><div class="grow"><b>@${esc(r.profiles?.username||'user')}</b></div><button data-accept="${r.id}">Accept</button></div>`).join(''):'No pending requests.';$('requestslist').querySelectorAll('[data-accept]').forEach(b=>b.onclick=()=>acceptRequest(b.dataset.accept));}
@@ -197,7 +199,7 @@ async function uploadAvatar(file){if(!file)return;if(file.size>5*1024*1024)retur
 }
 async function saveProfile(){const username=$('myusername').value.trim();if(!/^[a-zA-Z0-9_]{3,24}$/.test(username))return note('Username must be 3–24 letters, numbers or underscores.');const website=$('website').value.trim();const {error}=await sb.from('profiles').update({username,display_name:$('displayname').value.trim(),bio:$('bio').value.trim(),location:$('location').value.trim(),website,profile_visibility:$('profileVisibility').value,updated_at:new Date().toISOString()}).eq('id',user.id);if(error)return note(error.message);await refreshProfile();note('Profile saved.');}
 function closeChat(){currentConversation=null;document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('send').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
-function setTab(tab){document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));$('menuPanel').classList.remove('open');if(tab==='chats')closeChat();}
+function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();}
  $('signin').onclick=()=>doAuth('signin');$('signup').onclick=()=>doAuth('signup');$('logout').onclick=async()=>{if(channel)await sb.removeChannel(channel);await sb.auth.signOut();showAuth();};$('searchbtn').onclick=searchPeople;$('sendform').onsubmit=sendMessage;$('saveprofile').onclick=saveProfile;
  $('menuToggle').onclick=()=>$('menuPanel').classList.toggle('open');
  $('backToChats').onclick=closeChat;
