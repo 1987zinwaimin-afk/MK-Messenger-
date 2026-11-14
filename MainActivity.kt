@@ -1,6 +1,8 @@
 package com.mk.messenger
 
+import android.Manifest
 import android.app.Activity
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
@@ -14,6 +16,7 @@ import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.PermissionRequest
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
@@ -24,6 +27,8 @@ class MainActivity : Activity() {
     private var cameraOutput: Uri? = null
     private val pickerRequest = 4102
     private val cameraRequest = 4103
+    private val webCameraPermissionRequestCode = 4104
+    private var pendingWebCameraRequest: PermissionRequest? = null
     private val siteUrl = "https://mk-messenger-khant-min-htet2.vercel.app/"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,6 +55,25 @@ class MainActivity : Activity() {
             }
         }
         webView.webChromeClient = object : WebChromeClient() {
+            override fun onPermissionRequest(request: PermissionRequest) {
+                runOnUiThread {
+                    val allowedHost = Uri.parse(siteUrl).host
+                    val requestHost = request.origin.host
+                    val wantsCamera = request.resources?.contains(PermissionRequest.RESOURCE_VIDEO_CAPTURE) == true
+                    if (requestHost != allowedHost || !wantsCamera) {
+                        request.deny()
+                        return@runOnUiThread
+                    }
+                    if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                        request.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE))
+                    } else {
+                        pendingWebCameraRequest?.deny()
+                        pendingWebCameraRequest = request
+                        requestPermissions(arrayOf(Manifest.permission.CAMERA), webCameraPermissionRequestCode)
+                    }
+                }
+            }
+
             override fun onShowFileChooser(
                 view: WebView?,
                 filePathCallback: ValueCallback<Array<Uri>>?,
@@ -137,6 +161,26 @@ class MainActivity : Activity() {
         uploadCallback = null
     }
 
+    @Deprecated("Permission callback for WebView camera access")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == webCameraPermissionRequestCode) {
+            val request = pendingWebCameraRequest
+            pendingWebCameraRequest = null
+            if (request != null) {
+                val granted = grantResults.isNotEmpty() &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED &&
+                    checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+                if (granted) request.grant(arrayOf(PermissionRequest.RESOURCE_VIDEO_CAPTURE))
+                else request.deny()
+            }
+        }
+    }
+
     override fun onBackPressed() {
         if (::webView.isInitialized && webView.canGoBack()) webView.goBack() else super.onBackPressed()
     }
@@ -149,6 +193,8 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         uploadCallback?.onReceiveValue(null)
         uploadCallback = null
+        pendingWebCameraRequest?.deny()
+        pendingWebCameraRequest = null
         if (::webView.isInitialized) webView.destroy()
         super.onDestroy()
     }
