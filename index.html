@@ -495,6 +495,12 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
 
  $('cancelreply').onclick=()=>{replyTarget=null;showReplyPreview();};
  $('attachBtn').onclick=()=>{$('attachMenu').classList.toggle('hidden');$('emojiPicker').classList.add('hidden');};
+ document.addEventListener('click',e=>{
+  const target=e.target;
+  if(!target.closest('#attachMenu')&&!target.closest('#attachBtn')){
+   $('attachMenu').classList.add('hidden');
+  }
+ });
  $('cameraBtn').onclick=()=>$('cameraInput').click();
  $('galleryBtn').onclick=()=>$('galleryInput').click();
  $('voiceBtn').onclick=()=>{
