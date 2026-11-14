@@ -23,7 +23,7 @@ header{height:68px;background:var(--navy);color:#fff;display:flex;align-items:ce
 .person,.chatitem{padding:12px;border-radius:11px;cursor:pointer;display:flex;align-items:center;gap:12px}.person:hover,.chatitem:hover,.chatitem.active{background:#f0f4f8}.avatar{width:48px;height:48px;border-radius:50%;background:#e9dfc9;color:var(--navy);display:grid;place-items:center;font-weight:800;flex:none}.avatar-img{width:48px;height:48px;border-radius:50%;object-fit:cover;flex:none}.person-meta{min-width:0}
 #enableNotifications{font-size:12px;padding:7px 10px;min-height:32px;border-radius:9px;white-space:nowrap}
 .unread-badge{margin-left:auto;min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:var(--gold);color:var(--navy);font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
-.chatitem .person-meta{min-width:0}
+.chatitem .person-meta{min-width:0}.chatitem .chat-actions{display:flex;gap:4px;margin-left:auto}.chatitem .chat-actions button{font-size:10px;padding:5px 7px;min-height:28px}.chat-search-result{padding:9px;border-bottom:1px solid var(--line);cursor:pointer}.chat-search-result:hover{background:#f3f6fa}.pinned-message{outline:2px solid var(--gold)}
 @media(max-width:760px){#enableNotifications{font-size:11px;padding:6px 8px;min-height:30px}}
 
 .chathead{padding:16px;border-bottom:1px solid var(--line);font-weight:800;color:var(--navy);display:flex;align-items:center;gap:10px}.back-chat{display:none}
@@ -176,7 +176,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <nav class="tabs" id="menuPanel"><button class="active" data-tab="chats">Chats</button><button data-tab="friends">Find people</button><button data-tab="requests">Requests</button><button data-tab="profile">My profile</button><button data-tab="security">Security</button><button id="logout" class="secondary hidden menu-logout" type="button">Log out</button></nav>
 <div class="layout">
 <aside class="panel side">
-<div id="tab-chats"><div class="section-title chatlist-heading"><span>Conversations</span><button id="createGroupBtn" class="secondary" type="button">+ Group</button></div><div id="chatlist" class="muted small">Loading…</div></div>
+<div id="tab-chats"><div class="section-title chatlist-heading"><span id="chatListTitle">Conversations</span><button id="toggleArchivedBtn" class="secondary" type="button">Archived</button><button id="createGroupBtn" class="secondary" type="button">+ Group</button></div><input id="chatSearch" type="search" placeholder="Search conversations" aria-label="Search conversations"><input id="messageSearch" type="search" placeholder="Search messages…" aria-label="Search messages"><div id="messageSearchResults" class="small"></div><div id="chatlist" class="muted small">Loading…</div></div>
 <div id="tab-friends" class="hidden"><div class="section-title">Find people</div><div class="row"><input id="search" placeholder="Search username"><button id="searchbtn">Find</button></div><div id="searchresults"></div></div>
 <div id="tab-requests" class="hidden"><div class="section-title">Friend requests</div><div id="requestslist" class="muted small">Loading…</div></div>
 <div id="tab-profile" class="hidden"><div class="section-title">My profile</div>
@@ -277,7 +277,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 (() => {
  const $=id=>document.getElementById(id);
  const cfg=window.MK_CONFIG||{};
- let sb=null,user=null,currentConversation=null,currentConversationKind='direct',currentPeerId=null,blockedByMe=false,blockedByPeer=false,channel=null,inboxChannel=null,profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0,hiddenMessageIds=new Set(),replaceTarget=null,voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceStartedAt=0,voiceDuration=0,voiceTimer=null,voiceBlob=null,voiceCancelled=false,cropSourceImage=null,cropSourceUrl=null,cropSourceFile=null;
+ let sb=null,user=null,currentConversation=null,currentConversationKind='direct',currentPeerId=null,blockedByMe=false,blockedByPeer=false,channel=null,inboxChannel=null,profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0,hiddenMessageIds=new Set(),pinnedMessageIds=new Set(),chatPreferences=new Map(),showArchivedChats=false,replaceTarget=null,voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceStartedAt=0,voiceDuration=0,voiceTimer=null,voiceBlob=null,voiceCancelled=false,cropSourceImage=null,cropSourceUrl=null,cropSourceFile=null;
  function note(msg){$('notice').textContent=msg;$('notice').style.display='block';}
  function clearNote(){$('notice').style.display='none';}
  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -339,10 +339,35 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
    for(const m of recentMessages||[])if(!readIds.has(m.id))unread.set(m.conversation_id,(unread.get(m.conversation_id)||0)+1);
   }
  }
- $('chatlist').innerHTML=list.length?list.map(({c,other})=>{const name=other?.display_name||other?.username||c.title||'Direct chat',avatar=other?.avatar_url?'<img src="'+esc(other.avatar_url)+'" alt="" class="avatar-img">':'<div class="avatar">'+initials(name)+'</div>',count=currentConversation===c.id?0:(unread.get(c.id)||0),badge=count?'<span class="unread-badge">'+(count>99?'99+':count)+'</span>':'';return '<div class="chatitem '+(currentConversation===c.id?'active':'')+'" data-id="'+c.id+'" data-title="'+esc(name)+'">'+avatar+'<div class="person-meta"><b>'+esc(name)+'</b><div class="small muted">'+(other?.username?'@'+esc(other.username):esc(c.kind))+'</div></div>'+badge+'</div>';}).join(''):'No friends yet. Find people and add a friend to start chatting.';
- $('chatlist').querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>openChat(el.dataset.id,el.dataset.title));
+ const {data:prefRows,error:prefError}=conversationIds.length?await sb.from('chat_user_preferences').select('conversation_id,archived_at,pinned_at').eq('user_id',user.id).in('conversation_id',conversationIds):{data:[],error:null};
+ if(prefError){note('Could not load chat preferences: '+prefError.message);return;}
+ chatPreferences=new Map((prefRows||[]).map(p=>[p.conversation_id,p]));
+ const visibleList=list.filter(({c})=>showArchivedChats?!!chatPreferences.get(c.id)?.archived_at:!chatPreferences.get(c.id)?.archived_at);
+ visibleList.sort((a,b)=>{const ap=chatPreferences.get(a.c.id)?.pinned_at?1:0,bp=chatPreferences.get(b.c.id)?.pinned_at?1:0;return bp-ap||new Date(b.c.created_at)-new Date(a.c.created_at);});
+ const q=$('chatSearch').value.trim().toLowerCase();const filtered=visibleList.filter(({c,other})=>(other?.display_name||other?.username||c.title||'Direct chat').toLowerCase().includes(q)||(other?.username||'').toLowerCase().includes(q));
+ $('chatListTitle').textContent=showArchivedChats?'Archived conversations':'Conversations';$('toggleArchivedBtn').textContent=showArchivedChats?'All chats':'Archived';
+ $('chatlist').innerHTML=filtered.length?filtered.map(({c,other})=>{const name=other?.display_name||other?.username||c.title||'Direct chat',avatar=other?.avatar_url?'<img src="'+esc(other.avatar_url)+'" alt="" class="avatar-img">':'<div class="avatar">'+initials(name)+'</div>',count=currentConversation===c.id?0:(unread.get(c.id)||0),badge=count?'<span class="unread-badge">'+(count>99?'99+':count)+'</span>':'',pref=chatPreferences.get(c.id)||{};return '<div class="chatitem '+(currentConversation===c.id?'active':'')+'" data-id="'+c.id+'" data-title="'+esc(name)+'">'+avatar+'<div class="person-meta"><b>'+esc(name)+'</b><div class="small muted">'+(other?.username?'@'+esc(other.username):esc(c.kind))+'</div></div>'+badge+'<span class="chat-actions">'+(pref.pinned_at?'📌':'')+'<button class="secondary chat-pin" type="button" title="Pin chat">'+(pref.pinned_at?'Unpin':'Pin')+'</button><button class="secondary chat-archive" type="button">'+(pref.archived_at?'Restore':'Archive')+'</button></span></div>';}).join(''):'No conversations here.';
+ $('chatlist').querySelectorAll('[data-id]').forEach(el=>{el.onclick=e=>{if(e.target.closest('.chat-actions'))return;openChat(el.dataset.id,el.dataset.title);};el.querySelector('.chat-pin').onclick=e=>{e.stopPropagation();setChatPreference(el.dataset.id,{pinned_at:chatPreferences.get(el.dataset.id)?.pinned_at?null:new Date().toISOString()});};el.querySelector('.chat-archive').onclick=e=>{e.stopPropagation();setChatPreference(el.dataset.id,{archived_at:chatPreferences.get(el.dataset.id)?.archived_at?null:new Date().toISOString()});};});
 }
-async function setupInboxChannel(){
+async function setChatPreference(conversationId,patch){
+ const current=chatPreferences.get(conversationId)||{};const next={user_id:user.id,conversation_id:conversationId,archived_at:current.archived_at||null,pinned_at:current.pinned_at||null,...patch};
+ const {data,error}=await sb.from('chat_user_preferences').upsert(next,{onConflict:'user_id,conversation_id'}).select('conversation_id,archived_at,pinned_at').single();
+ if(error)return note('Could not update chat: '+error.message);
+ chatPreferences.set(conversationId,data);await loadChats();note('Conversation updated.');
+ }
+ async function searchMessages(){
+  const term=$('messageSearch').value.trim();$('messageSearchResults').innerHTML='';if(term.length<2)return;
+  const {data:members,error:memberError}=await sb.from('conversation_members').select('conversation_id').eq('user_id',user.id);
+  if(memberError)return note('Search failed: '+memberError.message);
+  const ids=[...new Set((members||[]).map(x=>x.conversation_id))];if(!ids.length)return;
+  const {data:rows,error}=await sb.from('messages').select('id,conversation_id,sender_id,body,message_type,created_at').in('conversation_id',ids).is('deleted_at',null).ilike('body','%'+term.replace(/[\\%_]/g,'\\\\async function setupInboxChannel(){')+'%').order('created_at',{ascending:false}).limit(30);
+  if(error)return note('Message search failed: '+error.message);
+  if(!rows?.length){$('messageSearchResults').textContent='No matching messages.';return;}
+  const convMap=new Map();for(const id of ids){const {data:c}=await sb.from('conversations').select('id,title,kind').eq('id',id).maybeSingle();if(c)convMap.set(id,c);}
+  $('messageSearchResults').innerHTML=rows.map(m=>'<div class="chat-search-result" data-conversation="'+m.conversation_id+'" data-message="'+m.id+'"><b>'+esc(convMap.get(m.conversation_id)?.title||'Conversation')+'</b><div>'+esc(m.message_type==='text'?m.body:'['+m.message_type+'] '+m.body)+'</div><span class="small muted">'+time(m.created_at)+'</span></div>').join('');
+  $('messageSearchResults').querySelectorAll('[data-message]').forEach(el=>el.onclick=async()=>{const conv=convMap.get(el.dataset.conversation);await openChat(el.dataset.conversation,conv?.title||'Conversation');setTimeout(()=>{const target=document.querySelector('[data-message-id="'+el.dataset.message+'"]');target?.scrollIntoView({behavior:'smooth',block:'center'});target?.classList.add('pinned-message');},350);});
+ }
+ async function setupInboxChannel(){
  if(!user||!sb)return;
  if(inboxChannel){await sb.removeChannel(inboxChannel);inboxChannel=null;}
  inboxChannel=sb.channel('inbox-'+user.id)
@@ -613,7 +638,7 @@ function appendMessage(m,receipt=null,replyText='',reactions=[]){
  const mine=m.sender_id===user.id,el=document.createElement('div');el.className='bubble'+(mine?' mine':'');el.dataset.messageId=m.id;
  const quoted=m.reply_to_id?'<div class="reply-quote">'+esc(replyText||'Replied message')+'</div>':'';
  const status=mine?(receipt?.read_at?'Seen':receipt?.delivered_at?'Delivered':'Sent'):'';
- el.innerHTML=quoted+'<div class="message-content"></div><div class="small">'+time(m.created_at)+(m.edited_at?' · Edited':'')+(mine?' · <span class="receipt">'+status+'</span>':'')+'</div><div class="msg-tools"><button class="reply-btn" type="button">Reply</button>'+(mine?'<button class="action-btn edit-btn" type="button">Edit</button>':'')+(mine&&['image','video','file'].includes(m.message_type)?'<button class="action-btn replace-btn" type="button">Replace</button>':'')+'<button class="action-btn delete-btn" type="button">Delete</button>'+(mine?'<button class="action-btn delete-everyone-btn" type="button">Delete for everyone</button>':'')+'</div><div class="reaction-bar"></div>';
+ el.innerHTML=quoted+'<div class="message-content"></div><div class="small">'+time(m.created_at)+(m.edited_at?' · Edited':'')+(mine?' · <span class="receipt">'+status+'</span>':'')+'</div><div class="msg-tools"><button class="reply-btn" type="button">Reply</button><button class="action-btn pin-message-btn" type="button">'+(pinnedMessageIds.has(m.id)?'Unpin':'Pin')+'</button>'+(mine?'<button class="action-btn edit-btn" type="button">Edit</button>':'')+(mine&&['image','video','file'].includes(m.message_type)?'<button class="action-btn replace-btn" type="button">Replace</button>':'')+'<button class="action-btn delete-btn" type="button">Delete</button>'+(mine?'<button class="action-btn delete-everyone-btn" type="button">Delete for everyone</button>':'')+'</div><div class="reaction-bar"></div>';
  const content=el.querySelector('.message-content');
  if(['image','video','file','audio'].includes(m.message_type)){
    content.textContent='Loading attachment…';
@@ -628,6 +653,7 @@ function appendMessage(m,receipt=null,replyText='',reactions=[]){
  }else content.textContent=m.body;
  $('messages').querySelector('.empty')?.remove();
  el.querySelector('.reply-btn').onclick=()=>setReply(m);
+ el.querySelector('.pin-message-btn').onclick=()=>togglePinnedMessage(m);
  el.querySelector('.edit-btn')?.addEventListener('click',()=>editMessage(m));
  el.querySelector('.replace-btn')?.addEventListener('click',()=>{replaceTarget=m;$('replaceInput').click();});
  el.querySelector('.delete-btn')?.addEventListener('click',()=>deleteForMe(m));
@@ -655,9 +681,20 @@ async function markConversationRead(){
 }
 async function sendTyping(){if(!channel||!currentConversation)return;const now=Date.now();if(now-lastTypingSent<900)return;lastTypingSent=now;await channel.send({type:'broadcast',event:'typing',payload:{user_id:user.id,username:profile?.username||'User'}});}
 
+ async function togglePinnedMessage(m){
+ const exists=pinnedMessageIds.has(m.id);
+ const result=exists?await sb.from('message_pins').delete().eq('message_id',m.id).eq('user_id',user.id):await sb.from('message_pins').insert({message_id:m.id,user_id:user.id});
+ if(result.error)return note('Could not update pinned message: '+result.error.message);
+ if(exists)pinnedMessageIds.delete(m.id);else pinnedMessageIds.add(m.id);
+ const el=document.querySelector('[data-message-id="'+m.id+'"]');if(el){const btn=el.querySelector('.pin-message-btn');if(btn)btn.textContent=exists?'Pin':'Unpin';el.classList.toggle('pinned-message',!exists);}
+ note(exists?'Message unpinned.':'Message pinned for you.');
+ }
  async function loadMessages(){
  const {data,error}=await sb.from('messages').select('*').eq('conversation_id',currentConversation).is('deleted_at',null).order('created_at',{ascending:true}).limit(200);
  if(error){note('Could not load messages: '+error.message);return;}
+ const pins=await sb.from('message_pins').select('message_id').eq('user_id',user.id).in('message_id',(data||[]).map(m=>m.id));
+ if(pins.error){note('Could not load pinned messages: '+pins.error.message);return;}
+ pinnedMessageIds=new Set((pins.data||[]).map(x=>x.message_id));
  const hidden=await sb.from('message_hidden_for').select('message_id').eq('user_id',user.id);
  if(hidden.error){note('Could not load hidden messages: '+hidden.error.message);return;}
  hiddenMessageIds=new Set((hidden.data||[]).map(x=>x.message_id));
@@ -822,6 +859,10 @@ async function saveProfile(){const username=$('myusername').value.trim();if(!/^[
 function closeChat(){if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();currentConversation=null;currentConversationKind='direct';currentPeerId=null;blockedByMe=false;blockedByPeer=false;$('blockUserBtn').classList.add('hidden');$('reportUserBtn').classList.add('hidden');$('groupInfoBtn').classList.add('hidden');$('chatname').textContent='Select a conversation';document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('likeBtn').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
 function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile','security'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();if(tab==='security')refreshSecurityPanel();}
  $('enableNotifications').onclick=enableBrowserNotifications;
+ $('toggleArchivedBtn').onclick=()=>{showArchivedChats=!showArchivedChats;loadChats();};
+ $('chatSearch').addEventListener('input',()=>loadChats());
+ $('messageSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchMessages();}});
+ $('messageSearch').addEventListener('input',()=>{if(!$('messageSearch').value.trim())$('messageSearchResults').innerHTML='';});
  $('changePasswordBtn').onclick=changeAccountPassword;$('signOutOthersBtn').onclick=signOutOtherDevices;
  $('groupInfoBtn').onclick=openGroupManage;
  $('blockUserBtn').onclick=toggleCurrentBlock;$('reportUserBtn').onclick=openReport;$('cancelReport').onclick=closeReport;$('submitReport').onclick=submitUserReport;$('reportOverlay').addEventListener('click',e=>{if(e.target===$('reportOverlay'))closeReport();});
