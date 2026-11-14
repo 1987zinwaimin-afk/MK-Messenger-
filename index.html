@@ -348,7 +348,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 </style>
 </head>
 <body>
-<header><div class="row"><button id="menuToggle" class="menu-toggle secondary" aria-label="Open menu">☰</button><div class="brand">MK <span>Messenger</span></div></div><div class="row"><button id="enableNotifications" class="secondary" type="button">🔔 Notifications</button><span id="who" class="small"></span></div></header>
+<header><div class="row"><button id="menuToggle" class="menu-toggle secondary" aria-label="Open menu">☰</button><div class="brand">MK <span>Messenger</span></div></div><div class="row"><span id="who" class="small"></span></div></header>
 <div class="wrap">
 <div id="notice"></div>
 <section id="auth" class="panel auth">
@@ -361,7 +361,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <p class="small muted">New accounts may need to confirm their email before signing in. Use the username field when registering.</p>
 </div></section>
 <section id="app">
-<nav class="tabs" id="menuPanel"><button class="active" data-tab="chats">Chats</button><button data-tab="wall">My Wall</button><button data-tab="activity">Friends Activity</button><button data-tab="friends">Find people</button><button data-tab="requests">Requests</button><button data-tab="profile">My profile</button><button data-tab="security">Security</button><button id="logout" class="secondary hidden menu-logout" type="button">Log out</button></nav>
+<nav class="tabs" id="menuPanel"><button class="active" data-tab="chats">Chats</button><button data-tab="wall">My Wall</button><button data-tab="activity">Friends Activity</button><button data-tab="friends">Find people</button><button data-tab="requests">Requests</button><button data-tab="profile">My profile</button><button data-tab="security">Security</button><button data-tab="settings">Settings</button><button id="logout" class="secondary hidden menu-logout" type="button">Log out</button></nav>
 <div class="layout">
 <aside class="panel side">
 <div id="tab-chats"><div class="section-title chatlist-heading"><span id="chatListTitle">Conversations</span><button id="toggleArchivedBtn" class="secondary" type="button">Archived</button><button id="createGroupBtn" class="secondary" type="button">+ Group</button></div><input id="chatSearch" type="search" placeholder="Search conversations or messages…" aria-label="Search conversations or messages"><div id="messageSearchResults" class="small"></div><div id="chatlist" class="muted small">Loading…</div></div>
@@ -395,6 +395,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <div class="share-card"><b>My profile QR</b><div id="profileQr"></div><div class="row"><button id="copyProfileLink" class="secondary grow">Copy profile link</button><button id="shareProfileLink" class="gold grow">Share</button></div></div>
 </div></div>
 <div id="tab-security" class="hidden"><div class="section-title">Account security</div><div class="security-card"><b>Signed-in account</b><div id="securityEmail" class="small muted">Loading account…</div><div id="securitySession" class="small muted"></div><div id="securityDevice" class="small muted"></div></div><div class="security-card"><b>Change password</b><p class="small muted">Use at least 8 characters. Your current account and chat data will remain unchanged.</p><input id="newPassword" type="password" minlength="8" autocomplete="new-password" placeholder="New password (at least 8 characters)"><input id="confirmPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Confirm new password"><button id="changePasswordBtn" class="gold" type="button">Update password</button></div><div class="security-card"><b>Other signed-in devices</b><p class="small muted">Sign out other sessions while keeping this device signed in. Supabase may allow existing access tokens to remain valid until they expire.</p><button id="signOutOthersBtn" class="secondary" type="button">Sign out other devices</button></div></div>
+<div id="tab-settings" class="hidden"><div class="section-title">Settings</div><div class="security-card"><b>Notifications</b><p class="small muted">Manage push notifications for this device. You can enable or disable browser notifications here.</p><button id="enableNotifications" class="gold" type="button">🔔 Enable notifications</button><div id="notificationHelp" class="small muted" style="margin-top:9px">Notification permission and device subscription status will appear here.</div></div></div>
 </aside>
 <main class="panel main" id="chatPanel">
 <div class="chathead"><button id="backToChats" class="secondary back-chat" type="button">← Back</button><span id="chatname">Select a conversation</span><span id="onlineStatus"></span><button id="blockUserBtn" class="secondary safety-btn hidden" type="button">Block</button><button id="reportUserBtn" class="secondary safety-btn hidden" type="button">Report</button><button id="voiceCallBtn" class="secondary call-action hidden" type="button" aria-label="Voice call" title="Voice call">📞</button><button id="videoCallBtn" class="secondary call-action hidden" type="button" aria-label="Video call" title="Video call">📹</button><button id="groupInfoBtn" class="secondary hidden" type="button" aria-label="Group settings">⚙</button></div>
@@ -626,13 +627,14 @@ async function syncPushButton(){
  const button=$('enableNotifications');
  if(!button)return;
  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){
-  button.textContent='🔔 Push unavailable';button.disabled=true;return;
+  button.textContent='🔔 Push unavailable';button.disabled=true;const help=$('notificationHelp');if(help)help.textContent='This browser does not support Web Push notifications.';return;
  }
  try{
   const registration=await navigator.serviceWorker.ready;
   const subscription=await registration.pushManager.getSubscription();
-  button.textContent=subscription?'🔔 Push enabled':'🔔 Enable notifications';
- }catch(_){button.textContent='🔔 Enable notifications';}
+  button.textContent=subscription?'🔔 Notifications enabled':'🔔 Enable notifications';
+  const help=$('notificationHelp');if(help)help.textContent=subscription?'Push notifications are enabled for this device.':'Push notifications are currently disabled on this device.';
+ }catch(_){button.textContent='🔔 Enable notifications';const help=$('notificationHelp');if(help)help.textContent='Unable to read notification status. Please try again.';}
 }
 async function enableBrowserNotifications(){
  if(!user||!sb)return note('Sign in before enabling notifications.');
@@ -651,7 +653,7 @@ async function enableBrowserNotifications(){
    user_id:user.id,endpoint:json.endpoint,p256dh:json.keys.p256dh,auth:json.keys.auth,updated_at:new Date().toISOString()
   },{onConflict:'user_id,endpoint'});
   if(error)throw error;
-  button.textContent='🔔 Push enabled';note('Push notifications are registered on this device. Server delivery will activate after VAPID sender setup.');
+  button.textContent='🔔 Notifications enabled';note('Push notifications are registered on this device. Server delivery will activate after VAPID sender setup.');
  }catch(e){note('Could not enable push notifications: '+(e.message||String(e)));}
  finally{button.disabled=false;await syncPushButton();}
 }
@@ -667,7 +669,7 @@ async function disableBrowserNotifications(){
    if(error)throw error;
    await subscription.unsubscribe();
   }
-  button.textContent='🔔 Enable notifications';note('Push notifications disabled on this device.');
+  button.textContent='🔔 Enable notifications';const help=$('notificationHelp');if(help)help.textContent='Push notifications are currently disabled on this device.';note('Push notifications disabled on this device.');
  }catch(e){note('Could not disable push notifications: '+(e.message||String(e)));}
  finally{button.disabled=false;await syncPushButton();}
 }
@@ -1390,7 +1392,7 @@ async function publishWallPost(){
  }finally{button.disabled=false;button.textContent='Create Post';}
 }
 function closeChat(){if(callPc||callPendingOffer){sendCallSignal('call-end').catch(()=>{});resetCall();}if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();currentConversation=null;currentConversationKind='direct';currentPeerId=null;blockedByMe=false;blockedByPeer=false;$('blockUserBtn').classList.add('hidden');$('reportUserBtn').classList.add('hidden');$('groupInfoBtn').classList.add('hidden');$('chatname').textContent='Select a conversation';document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('likeBtn').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
-function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile','security'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));const wallMode=tab==='wall'||tab==='activity';document.querySelector('.layout').classList.toggle('hidden',wallMode);$('wallPanel').classList.toggle('hidden',!wallMode);$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();if(tab==='security')refreshSecurityPanel();if(wallMode)loadWallFeed(tab);}
+function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile','security','settings'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));const wallMode=tab==='wall'||tab==='activity';document.querySelector('.layout').classList.toggle('hidden',wallMode);$('wallPanel').classList.toggle('hidden',!wallMode);$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();if(tab==='security')refreshSecurityPanel();if(wallMode)loadWallFeed(tab);}
  $('wallAddMedia').onclick=()=>$('wallMediaInput').click();
  $('wallMediaInput').onchange=e=>{const added=Array.from(e.target.files||[]);if(wallSelectedFiles.length+added.length>6){note('You can add up to 6 photos or videos per post.');e.target.value='';return;}wallSelectedFiles.push(...added);wallRenderPreview();e.target.value='';};
  $('wallPublishBtn').onclick=publishWallPost;
