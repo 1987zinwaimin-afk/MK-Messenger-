@@ -18,7 +18,7 @@ This roadmap is additive. Preserve the existing production URL, GitHub repositor
 
 ## Phase 3 — Notifications
 - Add Web Push subscriptions and a service worker for background notifications. (service-worker push display and click handling implemented on feature branch; delivery is not active yet)
-- Store each user's push subscription securely and support unsubscribe/revocation. (pending isolated schema + RLS review)
+- Store each user's push subscription securely and support unsubscribe/revocation. (additive user-scoped table + owner-only RLS migration added on feature branch; not applied to production)
 - Add an authenticated server-side push sender using VAPID secrets; never expose private keys or service-role credentials in the browser. (pending VAPID key setup)
 - Keep foreground notifications working and avoid exposing service-role credentials in the browser.
 
