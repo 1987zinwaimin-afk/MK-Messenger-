@@ -39,6 +39,7 @@ header{height:68px;background:var(--navy);color:#fff;display:flex;align-items:ce
 .group-friend .avatar-img,.group-friend .avatar{width:36px;height:36px}
 .chathead #chatname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chathead #groupInfoBtn{flex:none;min-width:38px;padding:7px 10px}
+.chathead .safety-btn{flex:none;padding:7px 9px;font-size:11px;min-height:34px}.report-dialog{width:min(100%,430px)}.report-dialog select,.report-dialog textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px;background:#fff;color:var(--ink);font:inherit}.report-dialog textarea{min-height:110px;resize:vertical}
 .group-member-row{display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .group-member-row .person-meta{flex:1;min-width:90px}
 .group-member-actions{display:flex;gap:5px;flex-wrap:wrap}
@@ -200,7 +201,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 </div></div>
 </aside>
 <main class="panel main" id="chatPanel">
-<div class="chathead"><button id="backToChats" class="secondary back-chat" type="button">← Back</button><span id="chatname">Select a conversation</span><span id="onlineStatus"></span><button id="groupInfoBtn" class="secondary hidden" type="button" aria-label="Group settings">⚙</button></div>
+<div class="chathead"><button id="backToChats" class="secondary back-chat" type="button">← Back</button><span id="chatname">Select a conversation</span><span id="onlineStatus"></span><button id="blockUserBtn" class="secondary safety-btn hidden" type="button">Block</button><button id="reportUserBtn" class="secondary safety-btn hidden" type="button">Report</button><button id="groupInfoBtn" class="secondary hidden" type="button" aria-label="Group settings">⚙</button></div>
 <div id="typing"></div>
 <div id="messages"><div class="empty">Choose a conversation or find a friend to start chatting.</div></div>
 <div id="replypreview" class="reply-preview"><span id="replytext"></span><button type="button" class="secondary" id="cancelreply">Cancel</button></div>
@@ -232,6 +233,17 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  <button type="button">😀</button><button type="button">😂</button><button type="button">🥰</button><button type="button">😍</button><button type="button">🙏</button><button type="button">❤️</button><button type="button">👍</button><button type="button">🎉</button>
 </div>
 </main>
+<div id="reportOverlay" class="crop-overlay hidden" role="dialog" aria-modal="true" aria-label="Report user">
+ <div class="crop-dialog report-dialog">
+  <div class="section-title">Report user</div>
+  <p class="small muted">Your report is private. The reported user cannot see who submitted it.</p>
+  <label class="small muted" for="reportReason">Reason</label>
+  <select id="reportReason"><option value="spam">Spam</option><option value="harassment">Harassment or bullying</option><option value="scam">Scam or fraud</option><option value="inappropriate">Inappropriate content</option><option value="impersonation">Impersonation</option><option value="other">Other</option></select>
+  <label class="small muted" for="reportDetails">Additional details (optional)</label>
+  <textarea id="reportDetails" maxlength="2000" placeholder="Describe what happened (up to 2,000 characters)"></textarea>
+  <div class="crop-actions"><button id="cancelReport" class="secondary" type="button">Cancel</button><button id="submitReport" class="gold" type="button">Submit report</button></div>
+ </div>
+</div>
 <div id="groupOverlay" class="crop-overlay hidden" role="dialog" aria-modal="true" aria-label="Create group chat">
  <div class="crop-dialog group-dialog">
   <div class="section-title">Create group chat</div>
@@ -263,7 +275,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 (() => {
  const $=id=>document.getElementById(id);
  const cfg=window.MK_CONFIG||{};
- let sb=null,user=null,currentConversation=null,currentConversationKind='direct',channel=null,inboxChannel=null,profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0,hiddenMessageIds=new Set(),replaceTarget=null,voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceStartedAt=0,voiceDuration=0,voiceTimer=null,voiceBlob=null,voiceCancelled=false,cropSourceImage=null,cropSourceUrl=null,cropSourceFile=null;
+ let sb=null,user=null,currentConversation=null,currentConversationKind='direct',currentPeerId=null,blockedByMe=false,blockedByPeer=false,channel=null,inboxChannel=null,profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0,hiddenMessageIds=new Set(),replaceTarget=null,voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceStartedAt=0,voiceDuration=0,voiceTimer=null,voiceBlob=null,voiceCancelled=false,cropSourceImage=null,cropSourceUrl=null,cropSourceFile=null;
  function note(msg){$('notice').textContent=msg;$('notice').style.display='block';}
  function clearNote(){$('notice').style.display='none';}
  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -436,12 +448,63 @@ async function openGroupCreator(){
  async function searchPeople(){const q=$('search').value.trim();if(q.length<3)return note('Enter at least 3 characters.');const {data,error}=await sb.from('profiles').select('id,username,display_name,bio').ilike('username',`%${q}%`).neq('id',user.id).limit(20);if(error)return note(error.message);$('searchresults').innerHTML=(data||[]).length?data.map(p=>`<div class="person"><div class="avatar">${initials(p.username)}</div><div class="grow"><b>@${esc(p.username)}</b><div class="small muted">${esc(p.display_name||'')}</div></div><button data-friend="${p.id}">Add</button></div>`).join(''):'No users found.';$('searchresults').querySelectorAll('[data-friend]').forEach(b=>b.onclick=()=>sendRequest(b.dataset.friend));}
  async function sendRequest(id){const {error}=await sb.from('friend_requests').insert({sender_id:user.id,receiver_id:id});if(error)return note(error.message);note('Friend request sent.');}
  async function acceptRequest(id){const {error}=await sb.rpc('accept_friend_request',{p_request_id:id});if(error)return note(error.message);await loadRequests();await loadChats();note('Friend request accepted.');}
+
+ async function refreshDirectSafety(){
+  if(!currentPeerId||currentConversationKind!=='direct'){blockedByMe=false;blockedByPeer=false;return;}
+  const {data,error}=await sb.from('user_blocks').select('blocker_id,blocked_id').or('and(blocker_id.eq.'+user.id+',blocked_id.eq.'+currentPeerId+'),and(blocker_id.eq.'+currentPeerId+',blocked_id.eq.'+user.id+')');
+  if(error){note('Could not load block settings: '+error.message);return;}
+  blockedByMe=(data||[]).some(x=>x.blocker_id===user.id&&x.blocked_id===currentPeerId);
+  blockedByPeer=(data||[]).some(x=>x.blocker_id===currentPeerId&&x.blocked_id===user.id);
+  $('blockUserBtn').textContent=blockedByMe?'Unblock':'Block';
+  $('message').disabled=blockedByMe||blockedByPeer;
+  $('likeBtn').disabled=blockedByMe||blockedByPeer;
+  $('attachBtn').disabled=blockedByMe||blockedByPeer;
+  $('cameraBtn').disabled=blockedByMe||blockedByPeer;
+  $('galleryBtn').disabled=blockedByMe||blockedByPeer;
+  $('voiceBtn').disabled=blockedByMe||blockedByPeer;
+  $('onlineStatus').textContent=blockedByPeer?'This user has blocked you':blockedByMe?'You blocked this user':'';
+ }
+ async function toggleCurrentBlock(){
+  if(!currentPeerId||currentConversationKind!=='direct')return;
+  if(blockedByMe){
+   if(!confirm('Unblock this user? They will be able to send you new messages and friend requests again.'))return;
+   const {error}=await sb.rpc('unblock_user',{p_user_id:currentPeerId});if(error)return note(error.message);
+   note('User unblocked.');
+  }else{
+   if(!confirm('Block this user? New direct messages and friend requests between you will be prevented. Existing chat history will remain.'))return;
+   const {error}=await sb.rpc('block_user',{p_user_id:currentPeerId});if(error)return note(error.message);
+   note('User blocked. Existing chat history has been kept.');
+  }
+  await refreshDirectSafety();await loadChats();
+ }
+ function openReport(){if(!currentPeerId||currentConversationKind!=='direct')return;$('reportReason').value='spam';$('reportDetails').value='';$('reportOverlay').classList.remove('hidden');}
+ function closeReport(){$('reportOverlay').classList.add('hidden');}
+ async function submitUserReport(){
+  if(!currentPeerId||currentConversationKind!=='direct')return;
+  const btn=$('submitReport');btn.disabled=true;
+  const {error}=await sb.from('user_reports').insert({reporter_id:user.id,reported_user_id:currentPeerId,conversation_id:currentConversation,reason:$('reportReason').value,details:$('reportDetails').value.trim()});
+  btn.disabled=false;
+  if(error)return note('Report could not be submitted: '+error.message);
+  closeReport();note('Report submitted privately. Thank you.');
+ }
+
  document.addEventListener('click',ev=>{if(!ev.target.closest('.bubble'))closeReactionPickers();},{passive:true});
  async function openChat(id,title){
  clearNote();currentConversation=id;
  const conversationResult=await sb.from('conversations').select('kind,title').eq('id',id).maybeSingle();
  currentConversationKind=conversationResult.data?.kind||'direct';
+ currentPeerId=null;blockedByMe=false;blockedByPeer=false;
  $('groupInfoBtn').classList.toggle('hidden',currentConversationKind!=='group');
+ $('blockUserBtn').classList.toggle('hidden',currentConversationKind!=='direct');
+ $('reportUserBtn').classList.toggle('hidden',currentConversationKind!=='direct');
+ if(currentConversationKind==='direct'){
+  const {data:peerRows,error:peerError}=await sb.from('conversation_members').select('user_id').eq('conversation_id',id).neq('user_id',user.id);
+  if(peerError)note('Could not load chat member: '+peerError.message);
+  currentPeerId=peerRows?.[0]?.user_id||null;
+  await refreshDirectSafety();
+ }else{
+  $('message').disabled=false;$('likeBtn').disabled=false;$('attachBtn').disabled=false;$('cameraBtn').disabled=false;$('galleryBtn').disabled=false;$('voiceBtn').disabled=false;$('onlineStatus').textContent='';
+ }
  if(currentConversationKind==='group'&&conversationResult.data?.title){$('chatname').textContent=conversationResult.data.title;}
  document.body.classList.add('mobile-chat-open');$('menuPanel').classList.remove('open');replyTarget=null;showReplyPreview();$('chatname').textContent=title||'Conversation';$('onlineStatus').textContent='';$('typing').textContent='';$('message').disabled=false;$('likeBtn').disabled=false;
  if(channel){await sb.removeChannel(channel);channel=null;}
@@ -729,10 +792,11 @@ async function uploadAvatar(){if(!cropSourceImage||!cropSourceFile)return;
  finally{saveButton.disabled=false;saveButton.textContent='Use this photo';}
 }
 async function saveProfile(){const username=$('myusername').value.trim();if(!/^[a-zA-Z0-9_]{3,24}$/.test(username))return note('Username must be 3–24 letters, numbers or underscores.');const website=$('website').value.trim();const {error}=await sb.from('profiles').update({username,display_name:$('displayname').value.trim(),bio:$('bio').value.trim(),location:$('location').value.trim(),website,profile_visibility:$('profileVisibility').value,updated_at:new Date().toISOString()}).eq('id',user.id);if(error)return note(error.message);await refreshProfile();note('Profile saved.');}
-function closeChat(){if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();currentConversation=null;currentConversationKind='direct';$('groupInfoBtn').classList.add('hidden');$('chatname').textContent='Select a conversation';document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('likeBtn').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
+function closeChat(){if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();currentConversation=null;currentConversationKind='direct';currentPeerId=null;blockedByMe=false;blockedByPeer=false;$('blockUserBtn').classList.add('hidden');$('reportUserBtn').classList.add('hidden');$('groupInfoBtn').classList.add('hidden');$('chatname').textContent='Select a conversation';document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('likeBtn').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
 function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();}
  $('enableNotifications').onclick=enableBrowserNotifications;
  $('groupInfoBtn').onclick=openGroupManage;
+ $('blockUserBtn').onclick=toggleCurrentBlock;$('reportUserBtn').onclick=openReport;$('cancelReport').onclick=closeReport;$('submitReport').onclick=submitUserReport;$('reportOverlay').addEventListener('click',e=>{if(e.target===$('reportOverlay'))closeReport();});
  $('closeGroupManage').onclick=closeGroupManage;
  $('groupManageOverlay').addEventListener('click',e=>{if(e.target===$('groupManageOverlay'))closeGroupManage();});
  $('renameGroupBtn').onclick=renameCurrentGroup;
