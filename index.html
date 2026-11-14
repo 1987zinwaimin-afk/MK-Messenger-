@@ -35,7 +35,7 @@ header{height:68px;background:var(--navy);color:#fff;display:flex;align-items:ce
 
 .chathead{padding:16px;border-bottom:1px solid var(--line);font-weight:800;color:var(--navy);display:flex;align-items:center;gap:10px}.back-chat{display:none}
 .menu-toggle{display:none;font-size:22px;padding:8px 12px}
-.profile-editor{padding-top:2px;display:grid;gap:9px;width:min(100%,560px);margin:0 auto}
+.profile-editor{padding-top:2px;display:grid;gap:9px;width:min(100%,560px);margin:0 auto}.friend-tools{margin:10px 0 18px}.friend-tools button{min-height:44px}
 .chatlist-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .chatlist-heading button{font-size:12px;padding:7px 10px;min-height:32px;border-radius:9px;white-space:nowrap}
 .group-dialog{width:min(100%,430px);max-height:min(82dvh,680px);overflow:auto}
@@ -184,7 +184,12 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <div class="layout">
 <aside class="panel side">
 <div id="tab-chats"><div class="section-title chatlist-heading"><span id="chatListTitle">Conversations</span><button id="toggleArchivedBtn" class="secondary" type="button">Archived</button><button id="createGroupBtn" class="secondary" type="button">+ Group</button></div><input id="chatSearch" type="search" placeholder="Search conversations or messages…" aria-label="Search conversations or messages"><div id="messageSearchResults" class="small"></div><div id="chatlist" class="muted small">Loading…</div></div>
-<div id="tab-friends" class="hidden"><div class="section-title">Find people</div><div class="row"><input id="search" placeholder="Search username"><button id="searchbtn">Find</button></div><div id="searchresults"></div></div>
+<div id="tab-friends" class="hidden">
+<div class="section-title">Find people & add friends</div>
+<div class="row friend-tools"><button id="openQrScanner" class="secondary grow" type="button">▦ Scan QR</button><button id="openMyQr" class="gold grow" type="button">My QR / Share link</button></div>
+<div class="section-title">Search and add friends</div>
+<div class="row"><input id="search" placeholder="Search username"><button id="searchbtn">Find</button></div><div id="searchresults"></div>
+</div>
 <div id="tab-requests" class="hidden"><div class="section-title">Friend requests</div><div id="requestslist" class="muted small">Loading…</div></div>
 <div id="tab-profile" class="hidden"><div class="section-title">My profile</div>
 <div class="profile-editor stack">
@@ -193,6 +198,14 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <input id="avatarFile" type="file" accept="image/*" class="avatar-file-input">
 <input id="cameraAvatarFile" type="file" accept="image/*" capture="user" class="avatar-file-input">
 <div class="small muted">Choose a photo from Gallery or take a new photo with Camera. Adjust the crop before saving. Maximum 5 MB.</div>
+<div id="qrScanOverlay" class="crop-overlay hidden" role="dialog" aria-modal="true" aria-label="Scan friend QR code">
+ <div class="crop-dialog"><div class="section-title">Scan a friend QR code</div>
+ <p class="small muted">Point your camera at an MK Messenger profile QR code.</p>
+ <video id="qrScanVideo" playsinline muted style="width:100%;max-height:52dvh;background:#081a33;border-radius:12px;object-fit:cover"></video>
+ <div id="qrScanStatus" class="small muted" style="margin-top:8px">Camera is starting…</div>
+ <div class="crop-actions"><button id="closeQrScanner" class="secondary" type="button">Close</button></div>
+ </div>
+</div>
 <div id="cropOverlay" class="crop-overlay hidden" role="dialog" aria-modal="true" aria-label="Adjust profile photo">
  <div class="crop-dialog"><div class="section-title">Adjust profile photo</div><div class="small muted">Move and zoom the photo to fit the circle.</div>
   <div class="crop-stage"><img id="cropImage" alt="Photo crop preview"></div>
@@ -868,6 +881,37 @@ async function uploadAndSend(file){
  appendMessage(data,null,replyTarget?.body||'');$('message').value='';replyTarget=null;showReplyPreview();
 }
  function renderAvatar(url){$('avatarPreview').classList.toggle('hidden',!url);$('avatarFallback').classList.toggle('hidden',!!url);if(url)$('avatarPreview').src=url;}
+let qrScanStream=null,qrScanFrame=0,qrScanDetector=null;
+function stopQrScanner(){
+ if(qrScanFrame)cancelAnimationFrame(qrScanFrame);qrScanFrame=0;
+ if(qrScanStream){qrScanStream.getTracks().forEach(t=>t.stop());qrScanStream=null;}
+ const video=$('qrScanVideo');if(video){video.pause();video.srcObject=null;}
+ $('qrScanOverlay').classList.add('hidden');
+}
+async function startQrScanner(){
+ if(!('BarcodeDetector' in window))return note('QR scanning is not supported by this browser. Please update Chrome or use username search.');
+ try{
+  qrScanDetector=new BarcodeDetector({formats:['qr_code']});
+  qrScanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+  const video=$('qrScanVideo');video.srcObject=qrScanStream;await video.play();
+  $('qrScanStatus').textContent='Scanning… Keep the QR code inside the camera frame.';
+  $('qrScanOverlay').classList.remove('hidden');
+  const scan=async()=>{if(!qrScanStream)return;try{
+   const codes=await qrScanDetector.detect(video);
+   if(codes.length){const raw=codes[0].rawValue;let username='';
+    try{const u=new URL(raw,location.origin);username=u.searchParams.get('profile')||'';}catch{}
+    if(!username)username=raw.replace(/^@/,'').trim();
+    stopQrScanner();
+    if(username){$('search').value=username;setTab('friends');await searchPeople();}
+    else note('This QR code is not an MK Messenger profile link.');
+    return;
+   }
+  }catch(err){}
+  if(qrScanStream)qrScanFrame=requestAnimationFrame(scan);
+  };
+  qrScanFrame=requestAnimationFrame(scan);
+ }catch(err){stopQrScanner();note(err?.name==='NotAllowedError'?'Camera permission denied. Allow camera access and try again.':'Could not start QR scanner: '+(err?.message||'Please try again.'));}
+}
 function profileUrl(){return location.origin+location.pathname+'?profile='+encodeURIComponent(profile?.username||'');}
 function renderProfileQr(){const box=$('profileQr');if(!box)return;box.innerHTML='';if(window.QRCode&&profile?.username)new QRCode(box,{text:profileUrl(),width:144,height:144,colorDark:'#081a33',colorLight:'#ffffff'});}
 function updateCropPreview(){if(!cropSourceImage)return;const stage=$('cropImage').parentElement,box=stage.clientWidth,zoom=Number($('cropZoom').value),x=Number($('cropX').value),y=Number($('cropY').value),w=cropSourceImage.naturalWidth,h=cropSourceImage.naturalHeight,base=Math.max(box/w,box/h),dw=w*base,dh=h*base,extraX=Math.max(0,(dw*zoom-box)/2),extraY=Math.max(0,(dh*zoom-box)/2),tx=-(x/100)*extraX,ty=-(y/100)*extraY,img=$('cropImage');img.style.width=dw+'px';img.style.height=dh+'px';img.style.transform=`translate(-50%,-50%) translate(${tx}px,${ty}px) scale(${zoom})`;}
@@ -918,9 +962,13 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
  $('cropZoom').oninput=updateCropPreview;$('cropX').oninput=updateCropPreview;$('cropY').oninput=updateCropPreview;
  $('cancelCrop').onclick=closeCrop;$('saveCrop').onclick=uploadAvatar;
  $('cropOverlay').addEventListener('click',e=>{if(e.target===$('cropOverlay'))closeCrop();});
- document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('cropOverlay').classList.contains('hidden'))closeCrop();});
- $('copyProfileLink').onclick=async()=>{await navigator.clipboard.writeText(profileUrl());note('Profile link copied.');};
- $('shareProfileLink').onclick=async()=>{const url=profileUrl();if(navigator.share)await navigator.share({title:'MK Messenger profile',url});else{await navigator.clipboard.writeText(url);note('Profile link copied.');}};
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('qrScanOverlay').classList.contains('hidden'))stopQrScanner();if(!$('cropOverlay').classList.contains('hidden'))closeCrop();}});
+ $('openQrScanner').onclick=startQrScanner;
+ $('closeQrScanner').onclick=stopQrScanner;
+ $('qrScanOverlay').addEventListener('click',e=>{if(e.target===$('qrScanOverlay'))stopQrScanner();});
+ $('openMyQr').onclick=()=>setTab('profile');
+ $('copyProfileLink').onclick=async()=>{try{await navigator.clipboard.writeText(profileUrl());note('Profile link copied.');}catch{note('Could not copy link. Please use Share.');}};
+ $('shareProfileLink').onclick=async()=>{const url=profileUrl();try{if(navigator.share)await navigator.share({title:'MK Messenger profile',url});else{await navigator.clipboard.writeText(url);note('Profile link copied.');}}catch(err){if(err?.name!=='AbortError')note('Could not share link. Please copy it instead.');}};
 
  $('cancelreply').onclick=()=>{replyTarget=null;showReplyPreview();};
  $('attachBtn').onclick=()=>{$('attachMenu').classList.toggle('hidden');$('emojiPicker').classList.add('hidden');};
