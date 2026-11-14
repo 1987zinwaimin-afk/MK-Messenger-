@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0758e8">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#081a33">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="/icons/mk-messenger.svg">
 <link rel="apple-touch-icon" sizes="192x192" href="/icons/mk-messenger-192.png">
@@ -18,7 +18,7 @@ if(location.hostname==='mk-messenger-alpha.vercel.app'){
 <!-- source-control-check: 2026-11-14 -->
 <style>
 :root{--navy:#081a33;--navy2:#102b4d;--gold:#e5bd68;--bg:#f3f6fa;--ink:#172338;--muted:#738096;--line:#e4e9f0;--white:#fff}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,Arial,sans-serif}
+*{box-sizing:border-box}html,body{min-height:100%;background:var(--bg);color-scheme:light}body{margin:0;padding-bottom:env(safe-area-inset-bottom,0px);background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,Arial,sans-serif}
 button,input{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;background:var(--navy2);color:white;font-weight:650}button.secondary{background:#edf1f6;color:var(--navy)}button.gold{background:var(--gold);color:#182238}button:disabled{opacity:.5;cursor:not-allowed}
 input{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff;color:var(--ink);outline:none}input:focus{border-color:var(--gold);box-shadow:0 0 0 3px #e5bd6830}
 header{height:68px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:2px solid var(--gold)}
