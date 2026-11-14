@@ -330,15 +330,9 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  const groups=rows.filter(x=>x.conversations?.kind==='group').map(x=>({c:x.conversations,other:null}));
  const list=[...people.filter(Boolean),...groups],conversationIds=[...new Set(list.map(x=>x.c.id))];
  const unread=new Map();
- if(conversationIds.length){
-  const {data:recentMessages,error:msgError}=await sb.from('messages').select('id,conversation_id,sender_id').in('conversation_id',conversationIds).neq('sender_id',user.id).is('deleted_at',null).order('created_at',{ascending:false}).limit(2000);
-  if(msgError)console.warn('Unread messages:',msgError.message);
-  else{
-   const mids=(recentMessages||[]).map(m=>m.id);let readIds=new Set();
-   if(mids.length){const {data:receipts,error:receiptError}=await sb.from('message_receipts').select('message_id,read_at').eq('user_id',user.id).in('message_id',mids);if(!receiptError)readIds=new Set((receipts||[]).filter(r=>r.read_at).map(r=>r.message_id));}
-   for(const m of recentMessages||[])if(!readIds.has(m.id))unread.set(m.conversation_id,(unread.get(m.conversation_id)||0)+1);
-  }
- }
+ const {data:unreadRows,error:unreadError}=await sb.rpc('get_unread_counts');
+ if(unreadError)console.warn('Unread counts:',unreadError.message);
+ else for(const row of unreadRows||[])unread.set(row.conversation_id,Number(row.unread_count)||0);
  const {data:prefRows,error:prefError}=conversationIds.length?await sb.from('chat_user_preferences').select('conversation_id,archived_at,pinned_at').eq('user_id',user.id).in('conversation_id',conversationIds):{data:[],error:null};
  if(prefError){note('Could not load chat preferences: '+prefError.message);return;}
  chatPreferences=new Map((prefRows||[]).map(p=>[p.conversation_id,p]));
@@ -638,7 +632,7 @@ function appendMessage(m,receipt=null,replyText='',reactions=[]){
  const mine=m.sender_id===user.id,el=document.createElement('div');el.className='bubble'+(mine?' mine':'');el.dataset.messageId=m.id;
  const quoted=m.reply_to_id?'<div class="reply-quote">'+esc(replyText||'Replied message')+'</div>':'';
  const status=mine?(receipt?.read_at?'Seen':receipt?.delivered_at?'Delivered':'Sent'):'';
- el.innerHTML=quoted+'<div class="message-content"></div><div class="small">'+time(m.created_at)+(m.edited_at?' · Edited':'')+(mine?' · <span class="receipt">'+status+'</span>':'')+'</div><div class="msg-tools"><button class="reply-btn" type="button">Reply</button><button class="action-btn pin-message-btn" type="button">'+(pinnedMessageIds.has(m.id)?'Unpin':'Pin')+'</button>'+(mine?'<button class="action-btn edit-btn" type="button">Edit</button>':'')+(mine&&['image','video','file'].includes(m.message_type)?'<button class="action-btn replace-btn" type="button">Replace</button>':'')+'<button class="action-btn delete-btn" type="button">Delete</button>'+(mine?'<button class="action-btn delete-everyone-btn" type="button">Delete for everyone</button>':'')+'</div><div class="reaction-bar"></div>';
+ el.innerHTML=quoted+'<div class="message-content"></div><div class="small">'+time(m.created_at)+(m.edited_at?' · Edited':'')+(mine?' · <span class="receipt">'+status+'</span>':'')+'</div><div class="msg-tools"><button class="reply-btn" type="button">Reply</button><button class="action-btn pin-message-btn" type="button">'+(pinnedMessageIds.has(m.id)?'Unpin':'Pin')+'</button><button class="action-btn forward-message-btn" type="button">Forward</button>'+(mine?'<button class="action-btn edit-btn" type="button">Edit</button>':'')+(mine&&['image','video','file'].includes(m.message_type)?'<button class="action-btn replace-btn" type="button">Replace</button>':'')+'<button class="action-btn delete-btn" type="button">Delete</button>'+(mine?'<button class="action-btn delete-everyone-btn" type="button">Delete for everyone</button>':'')+'</div><div class="reaction-bar"></div>';
  const content=el.querySelector('.message-content');
  if(['image','video','file','audio'].includes(m.message_type)){
    content.textContent='Loading attachment…';
@@ -654,6 +648,7 @@ function appendMessage(m,receipt=null,replyText='',reactions=[]){
  $('messages').querySelector('.empty')?.remove();
  el.querySelector('.reply-btn').onclick=()=>setReply(m);
  el.querySelector('.pin-message-btn').onclick=()=>togglePinnedMessage(m);
+ el.querySelector('.forward-message-btn')?.addEventListener('click',()=>forwardMessage(m));
  el.querySelector('.edit-btn')?.addEventListener('click',()=>editMessage(m));
  el.querySelector('.replace-btn')?.addEventListener('click',()=>{replaceTarget=m;$('replaceInput').click();});
  el.querySelector('.delete-btn')?.addEventListener('click',()=>deleteForMe(m));
@@ -681,7 +676,26 @@ async function markConversationRead(){
 }
 async function sendTyping(){if(!channel||!currentConversation)return;const now=Date.now();if(now-lastTypingSent<900)return;lastTypingSent=now;await channel.send({type:'broadcast',event:'typing',payload:{user_id:user.id,username:profile?.username||'User'}});}
 
- async function togglePinnedMessage(m){
+ async function forwardMessage(m){
+ if(!currentConversation)return;
+ if(m.message_type!=='text')return note('Forwarding attachments is not enabled yet. Text messages can be forwarded.');
+ const {data:members,error}=await sb.from('conversation_members').select('conversation_id,user_id,profiles(username,display_name),conversations(id,kind,title)').eq('user_id',user.id);
+ if(error)return note('Could not load conversations: '+error.message);
+ const ids=[...new Set((members||[]).map(r=>r.conversation_id))].filter(id=>id!==currentConversation);
+ if(!ids.length)return note('There is no other conversation to forward to.');
+ const details=await sb.from('conversation_members').select('conversation_id,user_id,profiles(username,display_name),conversations(id,kind,title)').in('conversation_id',ids);
+ if(details.error)return note('Could not load target conversations: '+details.error.message);
+ const options=ids.map(id=>{const group=details.data?.find(r=>r.conversation_id===id&&r.conversations?.kind==='group')?.conversations;if(group)return {id,label:group.title||'Group chat'};const peer=details.data?.find(r=>r.conversation_id===id&&r.user_id!==user.id)?.profiles;return {id,label:peer?.display_name||peer?.username||'Direct chat'};});
+ const promptText=options.map((o,i)=>(i+1)+'. '+o.label).join('\n');
+ const answer=prompt('Forward this text message to which conversation? Enter a number:\n'+promptText);
+ if(answer===null)return;
+ const choice=Number(answer);if(!Number.isInteger(choice)||choice<1||choice>options.length)return note('Choose a valid conversation number.');
+ const target=options[choice-1];
+ const {error:sendError}=await sb.from('messages').insert({conversation_id:target.id,sender_id:user.id,body:'↪ Forwarded message\n'+m.body,message_type:'text'});
+ if(sendError)return note('Could not forward message: '+sendError.message);
+ note('Message forwarded to '+target.label+'.');
+}
+async function togglePinnedMessage(m){
  const exists=pinnedMessageIds.has(m.id);
  const result=exists?await sb.from('message_pins').delete().eq('message_id',m.id).eq('user_id',user.id):await sb.from('message_pins').insert({message_id:m.id,user_id:user.id});
  if(result.error)return note('Could not update pinned message: '+result.error.message);
