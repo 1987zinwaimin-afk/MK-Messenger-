@@ -47,3 +47,16 @@ This roadmap is additive. Preserve the existing production URL, GitHub repositor
 - Review database changes and RLS/security advisors before any production migration.
 - Test with at least two independent accounts, including unauthorized-access checks.
 - Confirm the existing permanent Vercel alias remains attached before production release.
+
+
+## Wall & Friends Activity (2026-11-14)
+- [x] Additive Wall schema: posts, media metadata, likes, comments and nested replies.
+- [x] Default post privacy is Public; per-post Friends Only and Only Me options.
+- [x] Row Level Security for post, media, like and comment visibility and ownership.
+- [x] Private wall-media Storage bucket with owner upload/delete and post-privacy read checks.
+- [x] Add My Wall and Friends Activity navigation and responsive Navy + Gold UI.
+- [x] Photo/video composer (up to 6 items, 50 MB each), captions and privacy selector.
+- [x] Likes, comments/replies, post edit/delete/pin/unpin and shareable post links.
+- [x] JavaScript syntax validation and database policy/table verification.
+- [ ] Browser-level verification with two separate signed-in accounts (requires app test session).
+- [ ] Production deployment (hold until the user requests it and Vercel deployment capacity is available).
