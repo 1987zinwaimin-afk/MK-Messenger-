@@ -31,7 +31,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 .bubble .media-image{display:block;max-width:min(100%,320px);max-height:360px;border-radius:12px;object-fit:contain;margin:4px 0}
 .bubble .media-video{display:block;width:min(100%,320px);max-height:360px;border-radius:12px;margin:4px 0;background:#000}
 .bubble .media-file{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:#ffffff20;color:inherit;text-decoration:underline;overflow-wrap:anywhere}
-.bubble .msg-tools{display:flex;justify-content:flex-end;gap:8px;margin-top:5px}.bubble .reply-btn{font-size:11px;background:transparent;color:inherit;padding:2px 4px}
+.bubble .msg-tools{display:flex;justify-content:flex-end;gap:5px;margin-top:5px;flex-wrap:wrap}.bubble .reply-btn,.bubble .action-btn{font-size:11px;background:transparent;color:inherit;padding:2px 4px}.bubble .action-btn{opacity:.82}
 #typing{padding:0 16px 8px;color:var(--muted);font-size:12px;min-height:18px}
 #onlineStatus{font-size:11px;color:var(--muted);margin-left:8px}
 .reply-preview{display:none;padding:8px 12px;background:#f7f4ed;border-top:1px solid var(--line);font-size:12px;color:var(--navy)}
@@ -122,6 +122,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <input id="cameraInput" class="hidden" type="file" accept="image/*" capture="environment">
 <input id="galleryInput" class="hidden" type="file" accept="image/*,video/*">
 <input id="fileInput" class="hidden" type="file">
+<input id="replaceInput" class="hidden" type="file" accept="image/*,video/*">
 <form id="sendform" class="composer">
  <button id="attachBtn" class="tool-btn" type="button" aria-label="Attachments">＋</button>
  <button id="cameraBtn" class="tool-btn" type="button" aria-label="Camera">▣</button>
@@ -145,7 +146,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 (() => {
  const $=id=>document.getElementById(id);
  const cfg=window.MK_CONFIG||{};
- let sb=null,user=null,currentConversation=null,channel=null,profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0;
+ let sb=null,user=null,currentConversation=null,channel=null,profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0,hiddenMessageIds=new Set(),replaceTarget=null;
  function note(msg){$('notice').textContent=msg;$('notice').style.display='block';}
  function clearNote(){$('notice').style.display='none';}
  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -185,7 +186,11 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  await loadMessages();
  channel=sb.channel('conversation-'+id,{config:{presence:{key:user.id}}})
   .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages',filter:'conversation_id=eq.'+id},async payload=>{
-   const m=payload.new;if(m.sender_id!==user.id){appendMessage(m);await recordReceipt(m.id,document.visibilityState==='visible');}
+   const m=payload.new;if(m.sender_id!==user.id&&!hiddenMessageIds.has(m.id)){appendMessage(m);await recordReceipt(m.id,document.visibilityState==='visible');}
+  })
+  .on('postgres_changes',{event:'UPDATE',schema:'public',table:'messages',filter:'conversation_id=eq.'+id},async payload=>{
+   if(payload.new.deleted_at){document.querySelector('[data-message-id="'+payload.new.id+'"]')?.remove();}
+   else await loadMessages();
   })
   .on('postgres_changes',{event:'*',schema:'public',table:'message_receipts'},payload=>{
    const rid=payload.new?.message_id||payload.old?.message_id;
@@ -202,7 +207,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  const mine=m.sender_id===user.id,el=document.createElement('div');el.className='bubble'+(mine?' mine':'');el.dataset.messageId=m.id;
  const quoted=m.reply_to_id?'<div class="reply-quote">'+esc(replyText||'Replied message')+'</div>':'';
  const status=mine?(receipt?.read_at?'Seen':receipt?.delivered_at?'Delivered':'Sent'):'';
- el.innerHTML=quoted+'<div class="message-content"></div><div class="small">'+time(m.created_at)+(mine?' · <span class="receipt">'+status+'</span>':'')+'</div><div class="msg-tools"><button class="reply-btn" type="button">Reply</button></div>';
+ el.innerHTML=quoted+'<div class="message-content"></div><div class="small">'+time(m.created_at)+(m.edited_at?' · Edited':'')+(mine?' · <span class="receipt">'+status+'</span>':'')+'</div><div class="msg-tools"><button class="reply-btn" type="button">Reply</button>'+(mine?'<button class="action-btn edit-btn" type="button">Edit</button>':'')+(mine&&['image','video','file'].includes(m.message_type)?'<button class="action-btn replace-btn" type="button">Replace</button>':'')+'<button class="action-btn delete-btn" type="button">Delete</button>'+(mine?'<button class="action-btn delete-everyone-btn" type="button">Delete for everyone</button>':'')+'</div>';
  const content=el.querySelector('.message-content');
  if(['image','video','file'].includes(m.message_type)){
    content.textContent='Loading attachment…';
@@ -215,7 +220,12 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
    });
  }else content.textContent=m.body;
  $('messages').querySelector('.empty')?.remove();
- el.querySelector('.reply-btn').onclick=()=>setReply(m);$('messages').appendChild(el);$('messages').scrollTop=$('messages').scrollHeight;
+ el.querySelector('.reply-btn').onclick=()=>setReply(m);
+ el.querySelector('.edit-btn')?.addEventListener('click',()=>editMessage(m));
+ el.querySelector('.replace-btn')?.addEventListener('click',()=>{replaceTarget=m;$('replaceInput').click();});
+ el.querySelector('.delete-btn')?.addEventListener('click',()=>deleteForMe(m));
+ el.querySelector('.delete-everyone-btn')?.addEventListener('click',()=>deleteForEveryone(m));
+ $('messages').appendChild(el);$('messages').scrollTop=$('messages').scrollHeight;
 }
 function updateReceiptLabel(el,r){const s=el.querySelector('.receipt');if(s)s.textContent=r.read_at?'Seen':r.delivered_at?'Delivered':'Sent';}
 function setReply(m){replyTarget=m;$('replytext').textContent='Replying to: '+String(m.body||'').slice(0,100);showReplyPreview();$('message').focus();}
@@ -234,12 +244,57 @@ async function sendTyping(){if(!channel||!currentConversation)return;const now=D
  async function loadMessages(){
  const {data,error}=await sb.from('messages').select('*').eq('conversation_id',currentConversation).is('deleted_at',null).order('created_at',{ascending:true}).limit(200);
  if(error){note('Could not load messages: '+error.message);return;}
- $('messages').innerHTML='';const rows=data||[],ids=rows.map(m=>m.id);let receipts=[],replyRows=[];
+ const hidden=await sb.from('message_hidden_for').select('message_id').eq('user_id',user.id);
+ if(hidden.error){note('Could not load hidden messages: '+hidden.error.message);return;}
+ hiddenMessageIds=new Set((hidden.data||[]).map(x=>x.message_id));
+ const visibleRows=(data||[]).filter(m=>!hiddenMessageIds.has(m.id));
+ $('messages').innerHTML='';const rows=visibleRows,ids=rows.map(m=>m.id);let receipts=[],replyRows=[];
  if(!rows.length){$('messages').innerHTML='<div class="empty">No messages yet. Say hello!</div>';return;}
  if(ids.length){const r=await sb.from('message_receipts').select('*').in('message_id',ids).neq('user_id',user.id);if(!r.error)receipts=r.data||[];}
  const replyIds=rows.map(m=>m.reply_to_id).filter(Boolean);if(replyIds.length){const rr=await sb.from('messages').select('id,body').in('id',replyIds);if(!rr.error)replyRows=rr.data||[];}
  const receiptMap=new Map(receipts.map(r=>[r.message_id,r])),replyMap=new Map(replyRows.map(r=>[r.id,r.body]));
  rows.forEach(m=>appendMessage(m,receiptMap.get(m.id)||null,replyMap.get(m.reply_to_id)||''));
+}
+ async function editMessage(m){
+ if(m.message_type!=='text')return note('To change a photo or video, use Replace.');
+ const next=prompt('Edit message',m.body);if(next===null)return;
+ const body=next.trim();if(!body)return note('Message cannot be empty.');
+ const {error}=await sb.from('messages').update({body,edited_at:new Date().toISOString()}).eq('id',m.id).eq('sender_id',user.id);
+ if(error)return note('Edit failed: '+error.message);
+ await loadMessages();note('Message edited.');
+}
+ async function deleteForMe(m){
+ if(!confirm('Delete this message only from your chat?'))return;
+ const {error}=await sb.from('message_hidden_for').upsert({message_id:m.id,user_id:user.id},{onConflict:'message_id,user_id'});
+ if(error)return note('Could not delete message: '+error.message);
+ hiddenMessageIds.add(m.id);document.querySelector('[data-message-id="'+m.id+'"]')?.remove();
+ if(!$('messages').children.length)$('messages').innerHTML='<div class="empty">No messages yet. Say hello!</div>';
+}
+ async function deleteForEveryone(m){
+ if(m.sender_id!==user.id)return;
+ if(!confirm('Delete this message for everyone in this conversation?'))return;
+ const {error}=await sb.from('messages').update({deleted_at:new Date().toISOString(),body:'',edited_at:new Date().toISOString()}).eq('id',m.id).eq('sender_id',user.id);
+ if(error)return note('Delete for everyone failed: '+error.message);
+ document.querySelector('[data-message-id="'+m.id+'"]')?.remove();
+ if(['image','video','file'].includes(m.message_type)&&m.body){
+   const {error:removeError}=await sb.storage.from('chat-media').remove([m.body]);
+   if(removeError)note('Message deleted, but the stored attachment could not be removed: '+removeError.message);
+ }
+ if(!$('messages').children.length)$('messages').innerHTML='<div class="empty">No messages yet. Say hello!</div>';
+}
+ async function replaceAttachment(file){
+ const m=replaceTarget;replaceTarget=null;if(!m||!file)return;
+ if(m.sender_id!==user.id)return note('Only the sender can replace this attachment.');
+ if(file.size>50*1024*1024)return note('File size must be 50 MB or smaller.');
+ const type=file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':'file';
+ if(!['image','video'].includes(type))return note('Choose a photo or video to replace this attachment.');
+ if(!['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm'].includes(file.type))return note('This photo/video format is not supported.');
+ const path=currentConversation+'/'+crypto.randomUUID()+'-'+(file.name||'attachment').replace(/[^a-zA-Z0-9._-]/g,'_').slice(-80);
+ const {error:upErr}=await sb.storage.from('chat-media').upload(path,file,{contentType:file.type,upsert:false});
+ if(upErr)return note('Replacement upload failed: '+upErr.message);
+ const {error}=await sb.from('messages').update({body:path,message_type:type,edited_at:new Date().toISOString()}).eq('id',m.id).eq('sender_id',user.id);
+ if(error){await sb.storage.from('chat-media').remove([path]);return note('Could not replace attachment: '+error.message);}
+ await sb.storage.from('chat-media').remove([m.body]);await loadMessages();note('Attachment replaced.');
 }
  async function uploadAndSend(file){
  if(!currentConversation)return note('Open a conversation before attaching a file.');
@@ -294,6 +349,7 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
  $('emojiPicker').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('message').value+=$(b).textContent;$('emojiPicker').classList.add('hidden');$('message').focus();});
  $('attachMenu').querySelectorAll('[data-attach]').forEach(b=>b.onclick=()=>{$('attachMenu').classList.add('hidden');const target=b.dataset.attach==='camera'?'cameraInput':b.dataset.attach==='gallery'?'galleryInput':'fileInput';$(target).click();});
  ['cameraInput','galleryInput','fileInput'].forEach(id=>$(id).onchange=async()=>{const file=$(id).files?.[0];$(id).value='';if(file)await uploadAndSend(file);});
+ $('replaceInput').onchange=async()=>{const file=$('replaceInput').files?.[0];$('replaceInput').value='';if(file)await replaceAttachment(file);};
  $('message').addEventListener('focus',()=>document.body.classList.add('keyboard-open'));
  $('message').addEventListener('blur',()=>setTimeout(()=>{if(!document.activeElement||document.activeElement.id!=='message')document.body.classList.remove('keyboard-open');},150));
  $('message').addEventListener('input',sendTyping);
