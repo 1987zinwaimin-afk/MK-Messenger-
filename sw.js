@@ -23,3 +23,40 @@ self.addEventListener('fetch',event=>{
     event.respondWith(caches.match(request).then(cached=>cached||fetch(request)));
   }
 });
+
+self.addEventListener('push',event=>{
+  let payload={};
+  try{payload=event.data?event.data.json():{};}catch(_){
+    payload={body:event.data?event.data.text():'You have a new message in MK Messenger.'};
+  }
+  const title=String(payload.title||'MK Messenger').slice(0,80);
+  const body=String(payload.body||'You have a new message. Open MK Messenger to view it.').slice(0,180);
+  const rawUrl=typeof payload.url==='string'?payload.url:'/';
+  let target='/';
+  try{
+    const parsed=new URL(rawUrl,self.location.origin);
+    if(parsed.origin===self.location.origin)target=parsed.pathname+parsed.search+parsed.hash;
+  }catch(_){}
+  event.waitUntil(self.registration.showNotification(title,{
+    body,
+    icon:'/icons/mk-messenger-192.png',
+    badge:'/icons/mk-messenger-192.png',
+    tag:typeof payload.tag==='string'?payload.tag:'mk-messenger-message',
+    data:{url:target},
+    renotify:false
+  }));
+});
+self.addEventListener('notificationclick',event=>{
+  event.notification.close();
+  const target=event.notification.data&&typeof event.notification.data.url==='string'?event.notification.data.url:'/';
+  event.waitUntil((async()=>{
+    const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+    for(const client of windows){
+      if(new URL(client.url).origin===self.location.origin){
+        if('navigate' in client)await client.navigate(target);
+        return client.focus();
+      }
+    }
+    return self.clients.openWindow(target);
+  })());
+});
