@@ -35,7 +35,57 @@ header{height:68px;background:var(--navy);color:#fff;display:flex;align-items:ce
 
 .chathead{padding:16px;border-bottom:1px solid var(--line);font-weight:800;color:var(--navy);display:flex;align-items:center;gap:10px}.back-chat{display:none}
 .menu-toggle{display:none;font-size:22px;padding:8px 12px}
-.profile-editor{padding-top:2px;display:grid;gap:9px;width:min(100%,560px);margin:0 auto}.friend-tools{margin:10px 0 18px}.friend-tools button{min-height:44px}
+.profile-editor{padding-top:2px;display:grid;gap:9px;width:min(100%,560px);margin:0 auto}
+.friend-tools{margin:10px 0 18px}.friend-tools button{min-height:44px}
+.wall-panel{width:100%;max-width:980px;margin:0 auto;padding:18px}
+.wall-shell{width:min(100%,760px);margin:0 auto;display:grid;gap:14px}
+.wall-page-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.wall-page-head .section-title{font-size:22px;margin:0 0 3px}
+.wall-public-pill{font-size:11px;font-weight:750;color:#76571c;background:#fbf2dc;border:1px solid #f0dfb4;border-radius:99px;padding:7px 10px;white-space:nowrap}
+.wall-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:0 6px 22px #102b4d08;display:grid;gap:12px}
+.wall-profile-row{display:flex;align-items:center;gap:12px}
+.wall-avatar,.wall-avatar-fallback{width:56px;height:56px;flex:none;border-radius:50%;object-fit:cover;border:2px solid var(--gold)}
+.wall-avatar-fallback{display:grid;place-items:center;background:#e8eef7;color:var(--navy);font-size:20px;font-weight:850}
+.wall-stats{display:flex;gap:30px;border-top:1px solid var(--line);padding-top:11px}
+.wall-stats div{display:grid;gap:1px;text-align:center;min-width:55px}
+.wall-stats b{font-size:17px;color:var(--navy)}.wall-stats span{font-size:11px;color:var(--muted)}
+.wall-card-title{font-weight:850;color:var(--navy)}
+#wallPostText{width:100%;min-height:84px;resize:vertical;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit;color:var(--ink)}
+.wall-composer-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.wall-privacy-label{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}
+.wall-privacy-label select{width:auto;min-width:150px;padding:8px 10px;font-size:12px}
+.wall-publish{width:100%;min-height:44px}
+.wall-media-preview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.wall-media-preview:empty{display:none}
+.wall-preview-item{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:#edf1f6}
+.wall-preview-item img,.wall-preview-item video{width:100%;height:100%;object-fit:cover}
+.wall-preview-remove{position:absolute;right:5px;top:5px;border-radius:50%;width:26px;height:26px;padding:0;background:#081a33dd}
+.wall-post-list{display:grid;gap:14px}
+.wall-post{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;display:grid;gap:11px;box-shadow:0 6px 22px #102b4d08}
+.wall-post-head{display:flex;align-items:center;gap:10px}
+.wall-post-avatar{width:42px;height:42px;flex:none;border-radius:50%;object-fit:cover;background:#e8eef7}
+.wall-post-meta{flex:1;min-width:0}.wall-post-meta b{display:block;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wall-post-meta .small{color:var(--muted)}
+.wall-post-text{white-space:pre-wrap;overflow-wrap:anywhere;color:#24344d}
+.wall-post-media{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;overflow:hidden;border-radius:12px}
+.wall-post-media.single{grid-template-columns:1fr}
+.wall-post-media img,.wall-post-media video{width:100%;max-height:430px;aspect-ratio:1/1;object-fit:cover;background:#081a33}
+.wall-post-media.single img,.wall-post-media.single video{aspect-ratio:auto;max-height:520px;object-fit:contain}
+.wall-post-counts{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+.wall-post-actions{display:flex;justify-content:space-around;border-top:1px solid var(--line);padding-top:8px;gap:5px}
+.wall-post-actions button{background:transparent;color:var(--navy);padding:7px 8px;font-size:13px;flex:1}
+.wall-post-actions button.liked{color:#c33d57}
+.wall-post-comments{display:grid;gap:7px}
+.wall-comment{background:#f4f6f9;border-radius:10px;padding:8px 10px;font-size:12px}
+.wall-comment b{color:var(--navy);margin-right:5px}
+.wall-comment-form{display:flex;gap:7px}
+.wall-comment-form input{min-width:0;padding:9px 11px;font-size:13px}
+.wall-comment-form button{padding:8px 12px}
+.wall-empty{background:#fff;border:1px dashed #d6dee9;border-radius:14px;padding:28px 16px;text-align:center;color:var(--muted)}
+.wall-post-menu{display:flex;gap:4px}
+.wall-post-menu button{font-size:11px;padding:6px 8px}
+@media(max-width:760px){.wall-panel{padding:12px}.wall-page-head .section-title{font-size:19px}.wall-card,.wall-post{padding:12px}.wall-public-pill{font-size:10px;padding:6px 8px}.wall-post-actions button{font-size:12px;padding:7px 3px}.wall-composer-tools{align-items:stretch}.wall-privacy-label{justify-content:space-between;width:100%}.wall-privacy-label select{flex:1}}
+
 .chatlist-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .chatlist-heading button{font-size:12px;padding:7px 10px;min-height:32px;border-radius:9px;white-space:nowrap}
 .group-dialog{width:min(100%,430px);max-height:min(82dvh,680px);overflow:auto}
@@ -180,7 +230,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <p class="small muted">New accounts may need to confirm their email before signing in. Use the username field when registering.</p>
 </div></section>
 <section id="app">
-<nav class="tabs" id="menuPanel"><button class="active" data-tab="chats">Chats</button><button data-tab="friends">Find people</button><button data-tab="requests">Requests</button><button data-tab="profile">My profile</button><button data-tab="security">Security</button><button id="logout" class="secondary hidden menu-logout" type="button">Log out</button></nav>
+<nav class="tabs" id="menuPanel"><button class="active" data-tab="chats">Chats</button><button data-tab="wall">My Wall</button><button data-tab="activity">Friends Activity</button><button data-tab="friends">Find people</button><button data-tab="requests">Requests</button><button data-tab="profile">My profile</button><button data-tab="security">Security</button><button id="logout" class="secondary hidden menu-logout" type="button">Log out</button></nav>
 <div class="layout">
 <aside class="panel side">
 <div id="tab-chats"><div class="section-title chatlist-heading"><span id="chatListTitle">Conversations</span><button id="toggleArchivedBtn" class="secondary" type="button">Archived</button><button id="createGroupBtn" class="secondary" type="button">+ Group</button></div><input id="chatSearch" type="search" placeholder="Search conversations or messages…" aria-label="Search conversations or messages"><div id="messageSearchResults" class="small"></div><div id="chatlist" class="muted small">Loading…</div></div>
@@ -277,6 +327,37 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  </div>
 </div>
 </div>
+<section id="wallPanel" class="panel hidden wall-panel">
+ <div class="wall-shell">
+  <div class="wall-page-head">
+   <div><div class="section-title" id="wallHeading">My Wall</div><div class="small muted" id="wallSubheading">Share your moments with friends</div></div>
+   <span class="wall-public-pill">🌐 Public by default</span>
+  </div>
+  <div id="wallProfileCard" class="wall-card">
+   <div class="wall-profile-row">
+    <img id="wallAvatar" class="wall-avatar hidden" alt="Your profile photo">
+    <div id="wallAvatarFallback" class="wall-avatar-fallback">MK</div>
+    <div class="grow"><b id="wallDisplayName">My Profile</b><div class="small muted" id="wallUsername">@username</div></div>
+   </div>
+   <div class="wall-stats"><div><b id="wallPostCount">0</b><span>Posts</span></div><div><b id="wallFriendCount">0</b><span>Friends</span></div></div>
+  </div>
+  <div id="wallComposer" class="wall-card">
+   <div class="wall-card-title">Create a Post</div>
+   <textarea id="wallPostText" maxlength="5000" placeholder="What's on your mind?" rows="3"></textarea>
+   <input id="wallMediaInput" class="hidden" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" multiple>
+   <div id="wallMediaPreview" class="wall-media-preview"></div>
+   <div class="wall-composer-tools">
+    <button id="wallAddMedia" class="secondary" type="button">▧ Photo / Video</button>
+    <label class="wall-privacy-label">Post Privacy
+     <select id="wallPrivacy"><option value="public" selected>🌐 Public</option><option value="friends">👥 Friends Only</option><option value="only_me">🔒 Only Me</option></select>
+    </label>
+   </div>
+   <button id="wallPublishBtn" class="gold wall-publish" type="button">Create Post</button>
+  </div>
+  <div id="wallFeedStatus" class="small muted" aria-live="polite"></div>
+  <div id="wallPosts" class="wall-post-list"><div class="wall-empty">Loading posts…</div></div>
+ </div>
+</section>
 <div id="groupManageOverlay" class="crop-overlay hidden" role="dialog" aria-modal="true" aria-label="Group settings">
  <div class="crop-dialog group-dialog">
   <div class="section-title">Group settings</div>
@@ -961,8 +1042,139 @@ async function uploadAvatar(){if(!cropSourceImage||!cropSourceFile)return;
  finally{saveButton.disabled=false;saveButton.textContent='Use this photo';}
 }
 async function saveProfile(){const username=$('myusername').value.trim();if(!/^[a-zA-Z0-9_]{3,24}$/.test(username))return note('Username must be 3–24 letters, numbers or underscores.');const website=$('website').value.trim();const {error}=await sb.from('profiles').update({username,display_name:$('displayname').value.trim(),bio:$('bio').value.trim(),location:$('location').value.trim(),website,profile_visibility:$('profileVisibility').value,updated_at:new Date().toISOString()}).eq('id',user.id);if(error)return note(error.message);await refreshProfile();note('Profile saved.');}
+let wallSelectedFiles=[],wallObjectUrls=[];
+function wallFormatDate(value){return new Date(value).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}
+function wallPrivacyLabel(value){return value==='friends'?'👥 Friends Only':value==='only_me'?'🔒 Only Me':'🌐 Public';}
+function wallProfileAvatar(profileRow){return profileRow?.avatar_url?'<img class="wall-post-avatar" src="'+esc(profileRow.avatar_url)+'" alt="">':'<div class="wall-post-avatar" style="display:grid;place-items:center;color:var(--navy);font-weight:800">'+esc(initials(profileRow?.display_name||profileRow?.username||'M'))+'</div>';}
+function wallClearPreview(){wallObjectUrls.forEach(url=>URL.revokeObjectURL(url));wallObjectUrls=[];$('wallMediaPreview').innerHTML='';}
+function wallRenderPreview(){
+ wallClearPreview();
+ wallSelectedFiles.forEach((file,index)=>{
+  const url=URL.createObjectURL(file);wallObjectUrls.push(url);
+  const media=file.type.startsWith('video/')?'<video muted playsinline src="'+url+'"></video>':'<img src="'+url+'" alt="">';
+  $('wallMediaPreview').insertAdjacentHTML('beforeend','<div class="wall-preview-item">'+media+'<button type="button" class="wall-preview-remove" data-wall-remove-file="'+index+'" aria-label="Remove">×</button></div>');
+ });
+ $('wallMediaPreview').querySelectorAll('[data-wall-remove-file]').forEach(button=>button.onclick=()=>{wallSelectedFiles.splice(Number(button.dataset.wallRemoveFile),1);wallRenderPreview();});
+}
+async function loadWallFeed(mode){
+ if(!user||!sb)return;
+ const isActivity=mode==='activity';
+ $('wallHeading').textContent=isActivity?'Friends Activity':'My Wall';
+ $('wallSubheading').textContent=isActivity?'Recent posts shared by your friends':'Share your moments with friends';
+ $('wallComposer').classList.toggle('hidden',isActivity);
+ $('wallProfileCard').classList.toggle('hidden',isActivity);
+ $('wallFeedStatus').textContent='Loading posts…';
+ $('wallPosts').innerHTML='<div class="wall-empty">Loading posts…</div>';
+ try{
+  let authorIds=[user.id];
+  if(isActivity){
+   const fr=await sb.from('friend_requests').select('sender_id,receiver_id').eq('status','accepted').or('sender_id.eq.'+user.id+',receiver_id.eq.'+user.id);
+   if(fr.error)throw fr.error;
+   authorIds=(fr.data||[]).map(r=>r.sender_id===user.id?r.receiver_id:r.sender_id);
+   if(!authorIds.length){$('wallPosts').innerHTML='<div class="wall-empty">Add friends to see their posts here.</div>';$('wallFeedStatus').textContent='';return;}
+  }
+  let postQuery=sb.from('wall_posts').select('*').in('author_id',authorIds).order('is_pinned',{ascending:false}).order('created_at',{ascending:false}).limit(30);
+  if(!isActivity)postQuery=sb.from('wall_posts').select('*').eq('author_id',user.id).order('is_pinned',{ascending:false}).order('created_at',{ascending:false}).limit(30);
+  const {data:posts,error}=await postQuery;if(error)throw error;
+  if(!posts?.length){$('wallPosts').innerHTML='<div class="wall-empty">'+(isActivity?'Your friends have not shared any posts yet.':'Your Wall is empty. Create your first post above.')+'</div>';$('wallFeedStatus').textContent='';$('wallPostCount').textContent='0';return;}
+  const ids=posts.map(p=>p.id),authors=[...new Set(posts.map(p=>p.author_id))];
+  const [profilesResult,mediaResult,likesResult,commentsResult]=await Promise.all([
+   sb.from('profiles').select('id,username,display_name,avatar_url').in('id',authors),
+   sb.from('wall_post_media').select('*').in('post_id',ids).order('created_at'),
+   sb.from('wall_post_likes').select('post_id,user_id').in('post_id',ids),
+   sb.from('wall_post_comments').select('id,post_id,user_id,parent_comment_id,body,created_at').in('post_id',ids).order('created_at').limit(150)
+  ]);
+  for(const result of [profilesResult,mediaResult,likesResult,commentsResult])if(result.error)throw result.error;
+  const profileMap=new Map((profilesResult.data||[]).map(p=>[p.id,p]));
+  const mediaMap=new Map(),likeMap=new Map(),commentMap=new Map();
+  await Promise.all((mediaResult.data||[]).map(async m=>{
+   const {data,error}=await sb.storage.from('wall-media').createSignedUrl(m.storage_path,3600);
+   if(!mediaMap.has(m.post_id))mediaMap.set(m.post_id,[]);
+   mediaMap.get(m.post_id).push({...m,url:error?'':data?.signedUrl||''});
+  }));
+  (likesResult.data||[]).forEach(l=>{if(!likeMap.has(l.post_id))likeMap.set(l.post_id,[]);likeMap.get(l.post_id).push(l.user_id);});
+  (commentsResult.data||[]).forEach(c=>{if(!commentMap.has(c.post_id))commentMap.set(c.post_id,[]);commentMap.get(c.post_id).push(c);});
+  if(!isActivity){
+   $('wallDisplayName').textContent=profile?.display_name||profile?.username||'My Profile';
+   $('wallUsername').textContent='@'+(profile?.username||'');
+   $('wallAvatar').classList.toggle('hidden',!profile?.avatar_url);
+   $('wallAvatarFallback').classList.toggle('hidden',!!profile?.avatar_url);
+   if(profile?.avatar_url)$('wallAvatar').src=profile.avatar_url;
+   $('wallAvatarFallback').textContent=initials(profile?.display_name||profile?.username||'MK');
+   $('wallPostCount').textContent=String(posts.length);
+   const fr=await sb.from('friend_requests').select('sender_id,receiver_id').eq('status','accepted').or('sender_id.eq.'+user.id+',receiver_id.eq.'+user.id);
+   $('wallFriendCount').textContent=String(fr.data?.length||0);
+  }
+  $('wallPosts').innerHTML=posts.map(post=>{
+   const author=profileMap.get(post.author_id)||{};
+   const media=mediaMap.get(post.id)||[];
+   const likes=likeMap.get(post.id)||[];
+   const comments=commentMap.get(post.id)||[];
+   const own=post.author_id===user.id,liked=likes.includes(user.id);
+   const mediaHtml=media.length?'<div class="wall-post-media '+(media.length===1?'single':'')+'">'+media.map(m=>m.url?(m.media_type==='video'?'<video controls playsinline preload="metadata" src="'+esc(m.url)+'"></video>':'<img loading="lazy" src="'+esc(m.url)+'" alt="Post photo">'):'<div class="small muted">Media unavailable</div>').join('')+'</div>':'';
+   const commentHtml=comments.slice(-4).map(c=>{const cp=profileMap.get(c.user_id)||{};return '<div class="wall-comment" '+(c.parent_comment_id?'style="margin-left:18px"':'')+'><b>'+esc(cp.display_name||cp.username||'Member')+'</b>'+esc(c.body)+' <button type="button" class="secondary" data-wall-reply="'+esc(c.id)+'" style="padding:3px 6px;font-size:10px">Reply</button></div>';}).join('');
+   return '<article class="wall-post" data-post-card="'+esc(post.id)+'"><div class="wall-post-head">'+wallProfileAvatar(author)+'<div class="wall-post-meta"><b>'+esc(author.display_name||author.username||'MK Messenger User')+'</b><div class="small">@'+esc(author.username||'member')+' · '+esc(wallFormatDate(post.created_at))+' · '+esc(wallPrivacyLabel(post.privacy))+(post.is_pinned?' · 📌 Pinned':'')+'</div></div>'+(own?'<div class="wall-post-menu">'+(post.is_pinned?'':'<button type="button" class="secondary" data-wall-pin="'+esc(post.id)+'">Pin</button>')+'<button type="button" class="secondary" data-wall-edit="'+esc(post.id)+'">Edit</button><button type="button" class="secondary" data-wall-delete="'+esc(post.id)+'">Delete</button></div>':'')+'</div>'+(post.content?'<div class="wall-post-text">'+esc(post.content)+'</div>':'')+mediaHtml+'<div class="wall-post-counts"><span>♡ '+likes.length+' Likes</span><span>'+comments.length+' Comments</span></div><div class="wall-post-actions"><button type="button" class="'+(liked?'liked':'')+'" data-wall-like="'+esc(post.id)+'">'+(liked?'♥ Liked':'♡ Like')+'</button><button type="button" data-wall-focus-comment="'+esc(post.id)+'">◯ Comment</button><button type="button" data-wall-share="'+esc(post.id)+'">↗ Share</button></div><div class="wall-post-comments">'+commentHtml+'<form class="wall-comment-form" data-wall-comment-form="'+esc(post.id)+'"><input name="comment" maxlength="2000" placeholder="Write a comment…" required><button type="submit">Send</button></form></div></article>';
+  }).join('');
+  $('wallFeedStatus').textContent=posts.length+' post'+(posts.length===1?'':'s')+' loaded';
+  wallBindPostActions(posts,mediaMap);
+ }catch(error){$('wallFeedStatus').textContent='';$('wallPosts').innerHTML='<div class="wall-empty">Could not load Wall: '+esc(error.message||String(error))+'</div>';}
+}
+function wallBindPostActions(posts,mediaMap){
+ const root=$('wallPosts');
+ root.querySelectorAll('[data-wall-like]').forEach(button=>button.onclick=async()=>{
+  const postId=button.dataset.wallLike;button.disabled=true;
+  try{const {data:existing,error:qError}=await sb.from('wall_post_likes').select('id').eq('post_id',postId).eq('user_id',user.id).maybeSingle();if(qError)throw qError;
+   const result=existing?await sb.from('wall_post_likes').delete().eq('id',existing.id):await sb.from('wall_post_likes').insert({post_id:postId,user_id:user.id});
+   if(result.error)throw result.error;await loadWallFeed(document.querySelector('[data-tab="activity"]').classList.contains('active')?'activity':'wall');
+  }catch(error){note('Like could not be updated: '+error.message);button.disabled=false;}
+ });
+ root.querySelectorAll('[data-wall-focus-comment]').forEach(button=>button.onclick=()=>{const input=root.querySelector('[data-wall-comment-form="'+button.dataset.wallFocusComment+'"] input');input?.focus();});
+ root.querySelectorAll('[data-wall-reply]').forEach(button=>button.onclick=()=>{const reply=prompt('Write your reply:');if(!reply?.trim())return;wallAddComment(button.closest('[data-post-card]').dataset.postCard,reply.trim(),button.dataset.wallReply);});
+ root.querySelectorAll('[data-wall-comment-form]').forEach(form=>form.onsubmit=async e=>{e.preventDefault();const input=form.elements.comment;const value=input.value.trim();if(!value)return;const postId=form.dataset.wallCommentForm;const button=form.querySelector('button');button.disabled=true;try{await wallAddComment(postId,value,null);input.value='';}finally{button.disabled=false;}});
+ root.querySelectorAll('[data-wall-edit]').forEach(button=>button.onclick=async()=>{const post=posts.find(p=>p.id===button.dataset.wallEdit);const value=prompt('Edit your post:',post?.content||'');if(value===null||!post)return;if(!value.trim()&&!(mediaMap.get(post.id)||[]).length)return note('A post needs text or media.');const {error}=await sb.from('wall_posts').update({content:value.trim(),updated_at:new Date().toISOString()}).eq('id',post.id).eq('author_id',user.id);if(error)return note(error.message);await loadWallFeed('wall');});
+ root.querySelectorAll('[data-wall-delete]').forEach(button=>button.onclick=async()=>{const postId=button.dataset.wallDelete;if(!confirm('Delete this post and its attached media?'))return;try{const media=mediaMap.get(postId)||[];if(media.length){const {error}=await sb.storage.from('wall-media').remove(media.map(m=>m.storage_path));if(error)throw error;}const {error}=await sb.from('wall_posts').delete().eq('id',postId).eq('author_id',user.id);if(error)throw error;await loadWallFeed('wall');}catch(error){note('Could not delete post: '+error.message);}});
+ root.querySelectorAll('[data-wall-pin]').forEach(button=>button.onclick=async()=>{const {error}=await sb.from('wall_posts').update({is_pinned:true,updated_at:new Date().toISOString()}).eq('id',button.dataset.wallPin).eq('author_id',user.id);if(error)return note(error.message);await loadWallFeed('wall');});
+ root.querySelectorAll('[data-wall-share]').forEach(button=>button.onclick=async()=>{const url=location.origin+location.pathname+'?post='+encodeURIComponent(button.dataset.wallShare);try{if(navigator.share)await navigator.share({title:'MK Messenger post',url});else{await navigator.clipboard.writeText(url);note('Post link copied.');}}catch(error){if(error?.name!=='AbortError')note('Could not share this post.');}});
+}
+async function wallAddComment(postId,body,parentId){
+ const row={post_id:postId,user_id:user.id,body};
+ if(parentId)row.parent_comment_id=parentId;
+ const {error}=await sb.from('wall_post_comments').insert(row);
+ if(error)throw error;
+ const mode=document.querySelector('[data-tab="activity"]').classList.contains('active')?'activity':'wall';
+ await loadWallFeed(mode);
+}
+async function publishWallPost(){
+ const content=$('wallPostText').value.trim(),files=wallSelectedFiles.slice();
+ if(!content&&!files.length)return note('Write something or add a photo/video first.');
+ if(files.length>6)return note('You can add up to 6 photos or videos per post.');
+ for(const file of files){if(!['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm'].includes(file.type))return note('Only JPG, PNG, WEBP, GIF, MP4 and WEBM are supported.');if(file.size>50*1024*1024)return note('Each photo or video must be 50 MB or smaller.');}
+ const button=$('wallPublishBtn');button.disabled=true;button.textContent='Publishing…';
+ let postId=null,uploaded=[];
+ try{
+  const {data:post,error}=await sb.from('wall_posts').insert({author_id:user.id,content,privacy:$('wallPrivacy').value||'public'}).select('id').single();
+  if(error)throw error;postId=post.id;
+  for(const file of files){
+   const ext=(file.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,8)||'bin';
+   const path=user.id+'/'+postId+'/'+crypto.randomUUID()+'.'+ext;
+   const {error:uploadError}=await sb.storage.from('wall-media').upload(path,file,{contentType:file.type,upsert:false,cacheControl:'3600'});
+   if(uploadError)throw uploadError;uploaded.push(path);
+   const {error:metaError}=await sb.from('wall_post_media').insert({post_id:postId,owner_id:user.id,storage_path:path,media_type:file.type.startsWith('video/')?'video':'image',mime_type:file.type,file_size:file.size});
+   if(metaError)throw metaError;
+  }
+  $('wallPostText').value='';$('wallMediaInput').value='';wallSelectedFiles=[];wallClearPreview();$('wallPrivacy').value='public';note('Your post was published.');
+  await loadWallFeed('wall');
+ }catch(error){
+  if(uploaded.length)await sb.storage.from('wall-media').remove(uploaded);
+  if(postId)await sb.from('wall_posts').delete().eq('id',postId).eq('author_id',user.id);
+  note('Post could not be published: '+(error.message||String(error)));
+ }finally{button.disabled=false;button.textContent='Create Post';}
+}
 function closeChat(){if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();currentConversation=null;currentConversationKind='direct';currentPeerId=null;blockedByMe=false;blockedByPeer=false;$('blockUserBtn').classList.add('hidden');$('reportUserBtn').classList.add('hidden');$('groupInfoBtn').classList.add('hidden');$('chatname').textContent='Select a conversation';document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('likeBtn').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
-function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile','security'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();if(tab==='security')refreshSecurityPanel();}
+function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile','security'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));const wallMode=tab==='wall'||tab==='activity';document.querySelector('.layout').classList.toggle('hidden',wallMode);$('wallPanel').classList.toggle('hidden',!wallMode);$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();if(tab==='security')refreshSecurityPanel();if(wallMode)loadWallFeed(tab);}
+ $('wallAddMedia').onclick=()=>$('wallMediaInput').click();
+ $('wallMediaInput').onchange=e=>{const added=Array.from(e.target.files||[]);if(wallSelectedFiles.length+added.length>6){note('You can add up to 6 photos or videos per post.');e.target.value='';return;}wallSelectedFiles.push(...added);wallRenderPreview();e.target.value='';};
+ $('wallPublishBtn').onclick=publishWallPost;
  $('enableNotifications').onclick=enableBrowserNotifications;
  $('toggleArchivedBtn').onclick=()=>{showArchivedChats=!showArchivedChats;loadChats();};
  $('chatSearch').addEventListener('input',()=>{loadChats();if(!$('chatSearch').value.trim())$('messageSearchResults').innerHTML='';});
@@ -977,7 +1189,7 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
  $('createGroupBtn').onclick=openGroupCreator;
  $('cancelGroup').onclick=closeGroupCreator;$('saveGroup').onclick=createGroup;
  $('groupOverlay').addEventListener('click',e=>{if(e.target===$('groupOverlay'))closeGroupCreator();});
- $('signin').onclick=()=>doAuth('signin');$('signup').onclick=()=>doAuth('signup');$('logout').onclick=async()=>{if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();if(channel)await sb.removeChannel(channel);if(inboxChannel)await sb.removeChannel(inboxChannel);inboxChannel=null;await sb.auth.signOut();showAuth();};$('searchbtn').onclick=searchPeople;$('sendform').onsubmit=sendMessage;$('saveprofile').onclick=saveProfile;
+ $('signin').onclick=()=>doAuth('signin');$('signup').onclick=()=>doAuth('signup');$('logout').onclick=async()=>{if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();if(channel)await sb.removeChannel(channel);if(inboxChannel)await sb.removeChannel(inboxChannel);inboxChannel=null;wallSelectedFiles=[];wallClearPreview();await sb.auth.signOut();showAuth();};$('searchbtn').onclick=searchPeople;$('sendform').onsubmit=sendMessage;$('saveprofile').onclick=saveProfile;
  $('menuToggle').onclick=()=>$('menuPanel').classList.toggle('open');
  $('backToChats').onclick=closeChat;
  $('galleryAvatarBtn').onclick=()=>{$('avatarFile').value='';$('avatarFile').click();};
