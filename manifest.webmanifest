@@ -6,8 +6,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0758e8",
-  "theme_color": "#0758e8",
+  "background_color": "#f3f6fa",
+  "theme_color": "#081a33",
   "icons": [
     {
       "src": "/icons/mk-messenger-192.png",
