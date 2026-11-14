@@ -32,6 +32,11 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 .bubble .media-video{display:block;width:min(100%,320px);max-height:360px;border-radius:12px;margin:4px 0;background:#000}
 .bubble .media-file{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:#ffffff20;color:inherit;text-decoration:underline;overflow-wrap:anywhere}
 .bubble .msg-tools{display:flex;justify-content:flex-end;gap:5px;margin-top:5px;flex-wrap:wrap}.bubble .reply-btn,.bubble .action-btn{font-size:11px;background:transparent;color:inherit;padding:2px 4px}.bubble .action-btn{opacity:.82}
+.reaction-bar{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.reaction-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border:1px solid #dce3ed;border-radius:16px;background:#fff;color:#26364d;font-size:12px;min-width:32px;justify-content:center}
+.bubble.mine .reaction-chip{background:#17365b;color:#fff;border-color:#49617f}
+.reaction-chip.active{border-color:var(--gold);background:#fff0c9;color:#142b49;box-shadow:0 0 0 1px var(--gold)}
+.reaction-chip .reaction-count{font-size:11px;font-weight:700}
 #typing{padding:0 16px 8px;color:var(--muted);font-size:12px;min-height:18px}
 #onlineStatus{font-size:11px;color:var(--muted);margin-left:8px}
 .reply-preview{display:none;padding:8px 12px;background:#f7f4ed;border-top:1px solid var(--line);font-size:12px;color:var(--navy)}
@@ -192,6 +197,10 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
    if(payload.new.deleted_at){document.querySelector('[data-message-id="'+payload.new.id+'"]')?.remove();}
    else await loadMessages();
   })
+  .on('postgres_changes',{event:'*',schema:'public',table:'message_reactions'},async payload=>{
+   const mid=payload.new?.message_id||payload.old?.message_id;
+   if(mid&&document.querySelector('[data-message-id="'+mid+'"]'))await loadReactions(mid);
+  })
   .on('postgres_changes',{event:'*',schema:'public',table:'message_receipts'},payload=>{
    const rid=payload.new?.message_id||payload.old?.message_id;
    if(rid){const el=document.querySelector('[data-message-id="'+rid+'"]');if(el&&payload.new)updateReceiptLabel(el,payload.new);}
@@ -203,11 +212,39 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
   .subscribe(async status=>{if(status==='SUBSCRIBED')await channel.track({user_id:user.id,username:profile?.username||'User',online_at:new Date().toISOString()});});
  await markConversationRead();await loadChats();
 }
- function appendMessage(m,receipt=null,replyText=''){
+ const REACTION_EMOJIS=['❤️','😂','👍','😮','😢','🙏','🔥','🎉'];
+function renderReactionBar(messageId,reactions=[]){
+ const el=document.querySelector('[data-message-id="'+messageId+'"]');if(!el)return;
+ let bar=el.querySelector('.reaction-bar');if(!bar){bar=document.createElement('div');bar.className='reaction-bar';el.appendChild(bar);}
+ bar.innerHTML='';
+ for(const emoji of REACTION_EMOJIS){
+  const matches=reactions.filter(r=>r.emoji===emoji),mine=matches.some(r=>r.user_id===user.id);
+  const b=document.createElement('button');b.type='button';b.className='reaction-chip'+(mine?' active':'');
+  b.innerHTML=emoji+(matches.length?'<span class="reaction-count">'+matches.length+'</span>':'');
+  b.setAttribute('aria-label',emoji+' '+matches.length+' reactions');
+  b.onclick=()=>toggleReaction(messageId,emoji,mine);bar.appendChild(b);
+ }
+}
+async function loadReactions(messageId){
+ const {data,error}=await sb.from('message_reactions').select('id,message_id,user_id,emoji').eq('message_id',messageId);
+ if(error){note('Could not load reactions: '+error.message);return;}
+ renderReactionBar(messageId,data||[]);
+}
+async function toggleReaction(messageId,emoji,already){
+ if(already){
+  const {error}=await sb.from('message_reactions').delete().eq('message_id',messageId).eq('user_id',user.id).eq('emoji',emoji);
+  if(error)return note('Could not remove reaction: '+error.message);
+ }else{
+  const {error}=await sb.from('message_reactions').insert({message_id:messageId,user_id:user.id,emoji});
+  if(error)return note('Could not add reaction: '+error.message);
+ }
+ await loadReactions(messageId);
+}
+function appendMessage(m,receipt=null,replyText='',reactions=[]){
  const mine=m.sender_id===user.id,el=document.createElement('div');el.className='bubble'+(mine?' mine':'');el.dataset.messageId=m.id;
  const quoted=m.reply_to_id?'<div class="reply-quote">'+esc(replyText||'Replied message')+'</div>':'';
  const status=mine?(receipt?.read_at?'Seen':receipt?.delivered_at?'Delivered':'Sent'):'';
- el.innerHTML=quoted+'<div class="message-content"></div><div class="small">'+time(m.created_at)+(m.edited_at?' · Edited':'')+(mine?' · <span class="receipt">'+status+'</span>':'')+'</div><div class="msg-tools"><button class="reply-btn" type="button">Reply</button>'+(mine?'<button class="action-btn edit-btn" type="button">Edit</button>':'')+(mine&&['image','video','file'].includes(m.message_type)?'<button class="action-btn replace-btn" type="button">Replace</button>':'')+'<button class="action-btn delete-btn" type="button">Delete</button>'+(mine?'<button class="action-btn delete-everyone-btn" type="button">Delete for everyone</button>':'')+'</div>';
+ el.innerHTML=quoted+'<div class="message-content"></div><div class="small">'+time(m.created_at)+(m.edited_at?' · Edited':'')+(mine?' · <span class="receipt">'+status+'</span>':'')+'</div><div class="msg-tools"><button class="reply-btn" type="button">Reply</button>'+(mine?'<button class="action-btn edit-btn" type="button">Edit</button>':'')+(mine&&['image','video','file'].includes(m.message_type)?'<button class="action-btn replace-btn" type="button">Replace</button>':'')+'<button class="action-btn delete-btn" type="button">Delete</button>'+(mine?'<button class="action-btn delete-everyone-btn" type="button">Delete for everyone</button>':'')+'</div><div class="reaction-bar"></div>';
  const content=el.querySelector('.message-content');
  if(['image','video','file'].includes(m.message_type)){
    content.textContent='Loading attachment…';
@@ -225,7 +262,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  el.querySelector('.replace-btn')?.addEventListener('click',()=>{replaceTarget=m;$('replaceInput').click();});
  el.querySelector('.delete-btn')?.addEventListener('click',()=>deleteForMe(m));
  el.querySelector('.delete-everyone-btn')?.addEventListener('click',()=>deleteForEveryone(m));
- $('messages').appendChild(el);$('messages').scrollTop=$('messages').scrollHeight;
+ $('messages').appendChild(el);renderReactionBar(m.id,reactions);$('messages').scrollTop=$('messages').scrollHeight;
 }
 function updateReceiptLabel(el,r){const s=el.querySelector('.receipt');if(s)s.textContent=r.read_at?'Seen':r.delivered_at?'Delivered':'Sent';}
 function setReply(m){replyTarget=m;$('replytext').textContent='Replying to: '+String(m.body||'').slice(0,100);showReplyPreview();$('message').focus();}
@@ -252,8 +289,11 @@ async function sendTyping(){if(!channel||!currentConversation)return;const now=D
  if(!rows.length){$('messages').innerHTML='<div class="empty">No messages yet. Say hello!</div>';return;}
  if(ids.length){const r=await sb.from('message_receipts').select('*').in('message_id',ids).neq('user_id',user.id);if(!r.error)receipts=r.data||[];}
  const replyIds=rows.map(m=>m.reply_to_id).filter(Boolean);if(replyIds.length){const rr=await sb.from('messages').select('id,body').in('id',replyIds);if(!rr.error)replyRows=rr.data||[];}
+ const reactionResult=await sb.from('message_reactions').select('id,message_id,user_id,emoji').in('message_id',ids);
+ if(reactionResult.error){note('Could not load message reactions: '+reactionResult.error.message);return;}
+ const reactionMap=new Map();for(const r of (reactionResult.data||[])){if(!reactionMap.has(r.message_id))reactionMap.set(r.message_id,[]);reactionMap.get(r.message_id).push(r);}
  const receiptMap=new Map(receipts.map(r=>[r.message_id,r])),replyMap=new Map(replyRows.map(r=>[r.id,r.body]));
- rows.forEach(m=>appendMessage(m,receiptMap.get(m.id)||null,replyMap.get(m.reply_to_id)||''));
+ rows.forEach(m=>appendMessage(m,receiptMap.get(m.id)||null,replyMap.get(m.reply_to_id)||'',reactionMap.get(m.id)||[]));
 }
  async function editMessage(m){
  if(m.message_type!=='text')return note('To change a photo or video, use Replace.');
