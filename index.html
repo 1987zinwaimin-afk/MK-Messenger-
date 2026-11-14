@@ -360,7 +360,7 @@ async function setChatPreference(conversationId,patch){
   const {data:members,error:memberError}=await sb.from('conversation_members').select('conversation_id').eq('user_id',user.id);
   if(memberError)return note('Search failed: '+memberError.message);
   const ids=[...new Set((members||[]).map(x=>x.conversation_id))];if(!ids.length)return;
-  const {data:rows,error}=await sb.from('messages').select('id,conversation_id,sender_id,body,message_type,created_at').in('conversation_id',ids).is('deleted_at',null).ilike('body','%'+term.replace(/[\\%_]/g,'\\\\async function setupInboxChannel(){')+'%').order('created_at',{ascending:false}).limit(30);
+  const safeTerm=term.replace(/[%_]/g,'');if(safeTerm.length<2)return;const {data:rows,error}=await sb.from('messages').select('id,conversation_id,sender_id,body,message_type,created_at').in('conversation_id',ids).is('deleted_at',null).ilike('body','%'+safeTerm+'%').order('created_at',{ascending:false}).limit(30);
   if(error)return note('Message search failed: '+error.message);
   if(!rows?.length){$('messageSearchResults').textContent='No matching messages.';return;}
   const convMap=new Map();for(const id of ids){const {data:c}=await sb.from('conversations').select('id,title,kind').eq('id',id).maybeSingle();if(c)convMap.set(id,c);}
@@ -692,9 +692,8 @@ async function sendTyping(){if(!channel||!currentConversation)return;const now=D
  async function loadMessages(){
  const {data,error}=await sb.from('messages').select('*').eq('conversation_id',currentConversation).is('deleted_at',null).order('created_at',{ascending:true}).limit(200);
  if(error){note('Could not load messages: '+error.message);return;}
- const pins=await sb.from('message_pins').select('message_id').eq('user_id',user.id).in('message_id',(data||[]).map(m=>m.id));
- if(pins.error){note('Could not load pinned messages: '+pins.error.message);return;}
- pinnedMessageIds=new Set((pins.data||[]).map(x=>x.message_id));
+ const messageIds=(data||[]).map(m=>m.id);let pinRows=[];if(messageIds.length){const pins=await sb.from('message_pins').select('message_id').eq('user_id',user.id).in('message_id',messageIds);if(pins.error){note('Could not load pinned messages: '+pins.error.message);return;}pinRows=pins.data||[];}
+ pinnedMessageIds=new Set(pinRows.map(x=>x.message_id));
  const hidden=await sb.from('message_hidden_for').select('message_id').eq('user_id',user.id);
  if(hidden.error){note('Could not load hidden messages: '+hidden.error.message);return;}
  hiddenMessageIds=new Set((hidden.data||[]).map(x=>x.message_id));
