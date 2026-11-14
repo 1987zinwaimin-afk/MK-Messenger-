@@ -77,6 +77,16 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  .composer .tool-btn{width:27px;min-width:27px;font-size:19px}
  .message-pill{height:40px;padding-left:12px}
  .composer .like-btn{width:30px;min-width:30px}
+.voice-record-panel{display:flex;align-items:center;gap:9px;padding:8px 12px;background:#fff8e8;border-top:1px solid #f0dfb9;flex:none}
+.voice-record-panel .record-dot{width:9px;height:9px;border-radius:50%;background:#d83b42;box-shadow:0 0 0 4px #d83b4220;flex:none}
+.voice-record-panel .record-time{font-variant-numeric:tabular-nums;font-weight:750;color:var(--navy);flex:1}
+.voice-record-panel button{padding:8px 11px;font-size:12px;border-radius:9px}
+.voice-record-panel .voice-cancel{background:#edf1f6;color:var(--navy)}
+.voice-record-panel .voice-stop{background:#f3d58f;color:#182238}
+.voice-record-panel .voice-send{background:var(--navy2)}
+.bubble .voice-message{display:flex;align-items:center;gap:8px;min-width:min(260px,62vw);max-width:100%}
+.bubble .voice-message audio{width:100%;height:38px;max-width:280px}
+.bubble .voice-duration{font-size:11px;opacity:.75;white-space:nowrap}
  #chatPanel{position:fixed;left:0;right:0;top:var(--vv-top,72px);height:calc(var(--vvh, 100dvh) - var(--vv-top,72px));z-index:5;border-radius:0;overflow:hidden}
  #chatPanel .chathead{flex:none}
  #chatPanel #messages{flex:1;min-height:0;overflow-y:auto}
@@ -130,6 +140,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  <button type="button" data-attach="camera">Take photo</button>
  <button type="button" data-attach="gallery">Photo / video</button>
  <button type="button" data-attach="file">Choose file</button>
+ <button type="button" data-attach="voice">🎙️ Record voice message</button>
 </div>
 <input id="cameraInput" class="hidden" type="file" accept="image/*" capture="environment">
 <input id="galleryInput" class="hidden" type="file" accept="image/*,video/*">
@@ -143,6 +154,12 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  <div class="message-pill"><input id="message" placeholder="Message" maxlength="10000" autocomplete="off" disabled><button id="emojiBtn" class="inline-tool" type="button" aria-label="Emoji">☺</button></div>
  <button id="likeBtn" class="tool-btn like-btn" type="submit" aria-label="Send like">👍</button>
 </form>
+<div id="voiceRecordPanel" class="voice-record-panel hidden">
+ <span class="record-dot"></span><span id="voiceRecordStatus" class="record-time">Recording 0:00</span>
+ <button id="voiceCancel" class="voice-cancel" type="button">Cancel</button>
+ <button id="voiceStop" class="voice-stop" type="button">Stop</button>
+ <button id="voiceSend" class="voice-send" type="button" disabled>Send</button>
+</div>
 <div id="emojiPicker" class="emoji-picker hidden">
  <button type="button">😀</button><button type="button">😂</button><button type="button">🥰</button><button type="button">😍</button><button type="button">🙏</button><button type="button">❤️</button><button type="button">👍</button><button type="button">🎉</button>
 </div>
@@ -158,7 +175,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 (() => {
  const $=id=>document.getElementById(id);
  const cfg=window.MK_CONFIG||{};
- let sb=null,user=null,currentConversation=null,channel=null,profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0,hiddenMessageIds=new Set(),replaceTarget=null;
+ let sb=null,user=null,currentConversation=null,channel=null,profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0,hiddenMessageIds=new Set(),replaceTarget=null,voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceStartedAt=0,voiceDuration=0,voiceTimer=null,voiceBlob=null,voiceCancelled=false;
  function note(msg){$('notice').textContent=msg;$('notice').style.display='block';}
  function clearNote(){$('notice').style.display='none';}
  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -277,13 +294,14 @@ function appendMessage(m,receipt=null,replyText='',reactions=[]){
  const status=mine?(receipt?.read_at?'Seen':receipt?.delivered_at?'Delivered':'Sent'):'';
  el.innerHTML=quoted+'<div class="message-content"></div><div class="small">'+time(m.created_at)+(m.edited_at?' · Edited':'')+(mine?' · <span class="receipt">'+status+'</span>':'')+'</div><div class="msg-tools"><button class="reply-btn" type="button">Reply</button>'+(mine?'<button class="action-btn edit-btn" type="button">Edit</button>':'')+(mine&&['image','video','file'].includes(m.message_type)?'<button class="action-btn replace-btn" type="button">Replace</button>':'')+'<button class="action-btn delete-btn" type="button">Delete</button>'+(mine?'<button class="action-btn delete-everyone-btn" type="button">Delete for everyone</button>':'')+'</div><div class="reaction-bar"></div>';
  const content=el.querySelector('.message-content');
- if(['image','video','file'].includes(m.message_type)){
+ if(['image','video','file','audio'].includes(m.message_type)){
    content.textContent='Loading attachment…';
    sb.storage.from('chat-media').createSignedUrl(m.body,3600).then(({data,error})=>{
      content.innerHTML='';
      if(error||!data?.signedUrl){content.textContent='Attachment unavailable';return;}
      if(m.message_type==='image'){const img=document.createElement('img');img.className='media-image';img.src=data.signedUrl;img.alt='Shared image';img.loading='lazy';img.onclick=()=>window.open(data.signedUrl,'_blank','noopener');content.appendChild(img);}
      else if(m.message_type==='video'){const video=document.createElement('video');video.className='media-video';video.src=data.signedUrl;video.controls=true;video.playsInline=true;content.appendChild(video);}
+     else if(m.message_type==='audio'){const wrap=document.createElement('div');wrap.className='voice-message';const audio=document.createElement('audio');audio.src=data.signedUrl;audio.controls=true;audio.preload='metadata';audio.setAttribute('aria-label','Voice message');const duration=document.createElement('span');duration.className='voice-duration';duration.textContent=m.audio_duration_seconds?formatVoiceDuration(m.audio_duration_seconds):'Voice';wrap.append(audio,duration);content.appendChild(wrap);}
      else {const link=document.createElement('a');link.className='media-file';link.href=data.signedUrl;link.target='_blank';link.rel='noopener';link.textContent='📎 '+(m.file_name||m.body.split('/').pop()||'Download file');content.appendChild(link);}
    });
  }else content.textContent=m.body;
@@ -347,7 +365,7 @@ async function sendTyping(){if(!channel||!currentConversation)return;const now=D
  const {error}=await sb.from('messages').update({deleted_at:new Date().toISOString(),body:'',edited_at:new Date().toISOString()}).eq('id',m.id).eq('sender_id',user.id);
  if(error)return note('Delete for everyone failed: '+error.message);
  document.querySelector('[data-message-id="'+m.id+'"]')?.remove();
- if(['image','video','file'].includes(m.message_type)&&m.body){
+ if(['image','video','file','audio'].includes(m.message_type)&&m.body){
    const {error:removeError}=await sb.storage.from('chat-media').remove([m.body]);
    if(removeError)note('Message deleted, but the stored attachment could not be removed: '+removeError.message);
  }
@@ -367,7 +385,67 @@ async function sendTyping(){if(!channel||!currentConversation)return;const now=D
  if(error){await sb.storage.from('chat-media').remove([path]);return note('Could not replace attachment: '+error.message);}
  await sb.storage.from('chat-media').remove([m.body]);await loadMessages();note('Attachment replaced.');
 }
- async function uploadAndSend(file){
+ function formatVoiceDuration(seconds){const n=Math.max(0,Math.floor(seconds||0));return Math.floor(n/60)+':'+String(n%60).padStart(2,'0');}
+function resetVoicePanel(){
+ if(voiceTimer){clearInterval(voiceTimer);voiceTimer=null;}
+ $('voiceRecordPanel').classList.add('hidden');$('voiceRecordStatus').textContent='Recording 0:00';
+ $('voiceStop').disabled=false;$('voiceSend').disabled=true;
+ voiceBlob=null;voiceChunks=[];voiceDuration=0;
+}
+async function startVoiceRecording(){
+ if(!currentConversation)return note('Open a conversation before recording a voice message.');
+ if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)return note('Voice recording is not supported in this browser. Please use an updated Chrome browser.');
+ try{
+  voiceCancelled=false;voiceBlob=null;voiceChunks=[];voiceDuration=0;
+  voiceStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  const formats=['audio/webm;codecs=opus','audio/ogg;codecs=opus','audio/mp4','audio/webm','audio/ogg'];
+  const mimeType=formats.find(t=>MediaRecorder.isTypeSupported(t));
+  voiceRecorder=new MediaRecorder(voiceStream,mimeType?{mimeType}:undefined);
+  voiceRecorder.ondataavailable=e=>{if(e.data&&e.data.size)voiceChunks.push(e.data);};
+  voiceRecorder.onerror=()=>{note('Voice recording failed. Please try again.');cancelVoiceRecording();};
+  voiceRecorder.onstop=()=>{
+   if(voiceStream){voiceStream.getTracks().forEach(t=>t.stop());voiceStream=null;}
+   if(voiceCancelled){resetVoicePanel();return;}
+   voiceBlob=new Blob(voiceChunks,{type:voiceRecorder?.mimeType||'audio/webm'});
+   voiceDuration=Math.min(120,Math.max(1,Math.round((Date.now()-voiceStartedAt)/1000)));
+   $('voiceRecordStatus').textContent='Ready · '+formatVoiceDuration(voiceDuration);
+   $('voiceStop').disabled=true;$('voiceSend').disabled=!voiceBlob.size;
+  };
+  voiceStartedAt=Date.now();$('voiceRecordPanel').classList.remove('hidden');$('voiceRecordStatus').textContent='Recording 0:00';
+  voiceRecorder.start(250);
+  voiceTimer=setInterval(()=>{
+   const elapsed=Math.min(120,Math.floor((Date.now()-voiceStartedAt)/1000));
+   $('voiceRecordStatus').textContent='Recording '+formatVoiceDuration(elapsed);
+   if(elapsed>=120)stopVoiceRecording();
+  },250);
+ }catch(err){if(voiceStream){voiceStream.getTracks().forEach(t=>t.stop());voiceStream=null;}resetVoicePanel();note(err?.name==='NotAllowedError'?'Microphone permission was denied. Allow microphone access in your browser settings.':'Could not start microphone: '+(err?.message||'Please try again.'));}
+}
+function stopVoiceRecording(){
+ if(!voiceRecorder||voiceRecorder.state==='inactive')return;
+ if(voiceTimer){clearInterval(voiceTimer);voiceTimer=null;}
+ $('voiceStop').disabled=true;voiceRecorder.stop();
+}
+function cancelVoiceRecording(){
+ voiceCancelled=true;
+ if(voiceTimer){clearInterval(voiceTimer);voiceTimer=null;}
+ if(voiceRecorder&&voiceRecorder.state!=='inactive')voiceRecorder.stop();
+ if(voiceStream){voiceStream.getTracks().forEach(t=>t.stop());voiceStream=null;}
+ resetVoicePanel();
+}
+async function sendVoiceRecording(){
+ if(!voiceBlob||!currentConversation)return;
+ const blob=voiceBlob,mime=blob.type.split(';')[0]||'audio/webm';
+ const ext=mime==='audio/ogg'?'ogg':mime==='audio/mp4'?'m4a':mime==='audio/mpeg'?'mp3':mime==='audio/wav'?'wav':mime==='audio/aac'?'aac':'webm';
+ if(blob.size>15*1024*1024)return note('Voice message is too large. Please record a shorter message.');
+ $('voiceSend').disabled=true;$('voiceCancel').disabled=true;
+ const path=currentConversation+'/'+crypto.randomUUID()+'-voice.'+ext;
+ const {error:uploadError}=await sb.storage.from('chat-media').upload(path,blob,{contentType:mime,upsert:false});
+ if(uploadError){$('voiceSend').disabled=false;$('voiceCancel').disabled=false;return note('Voice upload failed: '+uploadError.message);}
+ const {data,error}=await sb.from('messages').insert({conversation_id:currentConversation,sender_id:user.id,body:path,message_type:'audio',audio_duration_seconds:voiceDuration}).select().single();
+ if(error){await sb.storage.from('chat-media').remove([path]);$('voiceSend').disabled=false;$('voiceCancel').disabled=false;return note('Voice message could not be saved: '+error.message);}
+ resetVoicePanel();appendMessage(data);note('Voice message sent.');setTimeout(clearNote,2200);
+}
+async function uploadAndSend(file){
  if(!currentConversation)return note('Open a conversation before attaching a file.');
  const allowed=new Set(['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','application/pdf','text/plain','application/zip']);
  if(!allowed.has(file.type))return note('This file type is not supported.');
@@ -398,7 +476,7 @@ async function uploadAvatar(file){if(!file)return;if(file.size>5*1024*1024)retur
  const {data}=sb.storage.from('profile-avatars').getPublicUrl(path);const {error}=await sb.from('profiles').update({avatar_url:data.publicUrl,updated_at:new Date().toISOString()}).eq('id',user.id);if(error)return note(error.message);await refreshProfile();note('Profile photo updated.');
 }
 async function saveProfile(){const username=$('myusername').value.trim();if(!/^[a-zA-Z0-9_]{3,24}$/.test(username))return note('Username must be 3–24 letters, numbers or underscores.');const website=$('website').value.trim();const {error}=await sb.from('profiles').update({username,display_name:$('displayname').value.trim(),bio:$('bio').value.trim(),location:$('location').value.trim(),website,profile_visibility:$('profileVisibility').value,updated_at:new Date().toISOString()}).eq('id',user.id);if(error)return note(error.message);await refreshProfile();note('Profile saved.');}
-function closeChat(){currentConversation=null;document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('likeBtn').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
+function closeChat(){if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();currentConversation=null;document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('likeBtn').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
 function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();}
  $('signin').onclick=()=>doAuth('signin');$('signup').onclick=()=>doAuth('signup');$('logout').onclick=async()=>{if(channel)await sb.removeChannel(channel);await sb.auth.signOut();showAuth();};$('searchbtn').onclick=searchPeople;$('sendform').onsubmit=sendMessage;$('saveprofile').onclick=saveProfile;
  $('menuToggle').onclick=()=>$('menuPanel').classList.toggle('open');
@@ -418,9 +496,10 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
  };
  $('emojiBtn').onclick=()=>{$('emojiPicker').classList.toggle('hidden');$('attachMenu').classList.add('hidden');};
  $('emojiPicker').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('message').value+=$(b).textContent;$('emojiPicker').classList.add('hidden');$('message').focus();});
- $('attachMenu').querySelectorAll('[data-attach]').forEach(b=>b.onclick=()=>{$('attachMenu').classList.add('hidden');const target=b.dataset.attach==='camera'?'cameraInput':b.dataset.attach==='gallery'?'galleryInput':'fileInput';$(target).click();});
+ $('attachMenu').querySelectorAll('[data-attach]').forEach(b=>b.onclick=()=>{$('attachMenu').classList.add('hidden');if(b.dataset.attach==='voice'){startVoiceRecording();return;}const target=b.dataset.attach==='camera'?'cameraInput':b.dataset.attach==='gallery'?'galleryInput':'fileInput';$(target).click();});
  ['cameraInput','galleryInput','fileInput'].forEach(id=>$(id).onchange=async()=>{const file=$(id).files?.[0];$(id).value='';if(file)await uploadAndSend(file);});
  $('replaceInput').onchange=async()=>{const file=$('replaceInput').files?.[0];$('replaceInput').value='';if(file)await replaceAttachment(file);};
+ $('voiceStop').onclick=stopVoiceRecording;$('voiceCancel').onclick=cancelVoiceRecording;$('voiceSend').onclick=sendVoiceRecording;
  $('message').addEventListener('focus',()=>document.body.classList.add('keyboard-open'));
  $('message').addEventListener('blur',()=>setTimeout(()=>{if(!document.activeElement||document.activeElement.id!=='message')document.body.classList.remove('keyboard-open');},150));
  $('message').addEventListener('input',sendTyping);
