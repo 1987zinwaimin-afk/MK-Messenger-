@@ -198,14 +198,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <input id="avatarFile" type="file" accept="image/*" class="avatar-file-input">
 <input id="cameraAvatarFile" type="file" accept="image/*" capture="user" class="avatar-file-input">
 <div class="small muted">Choose a photo from Gallery or take a new photo with Camera. Adjust the crop before saving. Maximum 5 MB.</div>
-<div id="qrScanOverlay" class="crop-overlay hidden" role="dialog" aria-modal="true" aria-label="Scan friend QR code">
- <div class="crop-dialog"><div class="section-title">Scan a friend QR code</div>
- <p class="small muted">Point your camera at an MK Messenger profile QR code.</p>
- <video id="qrScanVideo" playsinline muted style="width:100%;max-height:52dvh;background:#081a33;border-radius:12px;object-fit:cover"></video>
- <div id="qrScanStatus" class="small muted" style="margin-top:8px">Camera is starting…</div>
- <div class="crop-actions"><button id="closeQrScanner" class="secondary" type="button">Close</button></div>
- </div>
-</div>
+
 <div id="cropOverlay" class="crop-overlay hidden" role="dialog" aria-modal="true" aria-label="Adjust profile photo">
  <div class="crop-dialog"><div class="section-title">Adjust profile photo</div><div class="small muted">Move and zoom the photo to fit the circle.</div>
   <div class="crop-stage"><img id="cropImage" alt="Photo crop preview"></div>
@@ -255,6 +248,14 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  <button type="button">😀</button><button type="button">😂</button><button type="button">🥰</button><button type="button">😍</button><button type="button">🙏</button><button type="button">❤️</button><button type="button">👍</button><button type="button">🎉</button>
 </div>
 </main>
+<div id="qrScanOverlay" class="crop-overlay hidden" role="dialog" aria-modal="true" aria-label="Scan friend QR code">
+ <div class="crop-dialog"><div class="section-title">Scan a friend QR code</div>
+ <p class="small muted">Point your camera at an MK Messenger profile QR code.</p>
+ <video id="qrScanVideo" playsinline muted style="width:100%;max-height:52dvh;background:#081a33;border-radius:12px;object-fit:cover"></video>
+ <div id="qrScanStatus" class="small muted" style="margin-top:8px">Camera is starting…</div>
+ <div class="crop-actions"><button id="closeQrScanner" class="secondary" type="button">Close</button></div>
+ </div>
+</div>
 <div id="reportOverlay" class="crop-overlay hidden" role="dialog" aria-modal="true" aria-label="Report user">
  <div class="crop-dialog report-dialog">
   <div class="section-title">Report user</div>
