@@ -663,15 +663,16 @@ async function sendTyping(){if(!channel||!currentConversation)return;const now=D
 }
  async function deleteForEveryone(m){
  if(m.sender_id!==user.id)return;
- if(!confirm('Delete this message for everyone in this conversation?'))return;
- const {error}=await sb.from('messages').update({deleted_at:new Date().toISOString(),body:'',edited_at:new Date().toISOString()}).eq('id',m.id).eq('sender_id',user.id);
- if(error)return note('Delete for everyone failed: '+error.message);
- document.querySelector('[data-message-id="'+m.id+'"]')?.remove();
+ if(!confirm('Permanently delete this message and its server record for everyone? This cannot be undone.'))return;
  if(['image','video','file','audio'].includes(m.message_type)&&m.body){
    const {error:removeError}=await sb.storage.from('chat-media').remove([m.body]);
-   if(removeError)note('Message deleted, but the stored attachment could not be removed: '+removeError.message);
+   if(removeError)return note('Attachment could not be removed from storage. Message was not deleted: '+removeError.message);
  }
+ const {error}=await sb.rpc('delete_message_permanently',{p_message_id:m.id});
+ if(error)return note('Permanent delete failed: '+error.message);
+ document.querySelector('[data-message-id="'+m.id+'"]')?.remove();
  if(!$('messages').children.length)$('messages').innerHTML='<div class="empty">No messages yet. Say hello!</div>';
+ note('Message permanently deleted from the server.');
 }
  async function replaceAttachment(file){
  const m=replaceTarget;replaceTarget=null;if(!m||!file)return;
