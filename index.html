@@ -362,8 +362,15 @@ function setReply(m){replyTarget=m;$('replytext').textContent='Replying to: '+St
 function showReplyPreview(){$('replypreview').classList.toggle('show',!!replyTarget);if(!replyTarget)$('replytext').textContent='';}
 function renderPresence(){if(!channel)return;const online=Object.values(channel.presenceState()).flat().filter(p=>p.user_id!==user.id);$('onlineStatus').textContent=online.length?'· Online':'· Offline';}
 async function recordReceipt(messageId,read=false){
- const now=new Date().toISOString(),values={message_id:messageId,user_id:user.id,delivered_at:now,...(read?{read_at:now}:{})};
- const {error}=await sb.from('message_receipts').upsert(values,{onConflict:'message_id,user_id'});if(error)console.warn('receipt',error.message);
+ const now=new Date().toISOString();
+ // Insert once without replacing an existing read_at value. A later delivery
+ // update must never downgrade a previously Seen receipt back to Delivered.
+ const values={message_id:messageId,user_id:user.id,delivered_at:now,...(read?{read_at:now}:{})};
+ const {error:insertError}=await sb.from('message_receipts').upsert(values,{onConflict:'message_id,user_id',ignoreDuplicates:true});
+ if(insertError){console.warn('receipt insert',insertError.message);return;}
+ const patch={delivered_at:now};if(read)patch.read_at=now;
+ const {error:updateError}=await sb.from('message_receipts').update(patch).eq('message_id',messageId).eq('user_id',user.id);
+ if(updateError)console.warn('receipt update',updateError.message);
 }
 async function markConversationRead(){
  if(!currentConversation)return;const {data,error}=await sb.from('messages').select('id').eq('conversation_id',currentConversation).neq('sender_id',user.id).is('deleted_at',null).limit(200);
