@@ -16,11 +16,12 @@
       "purpose": "any"
     },
     {
-      "src": "/icons/mk-messenger-512.svg",
+      "src": "/icons/mk-messenger-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "id": "/"
 }
