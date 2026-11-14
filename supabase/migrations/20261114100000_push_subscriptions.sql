@@ -8,7 +8,7 @@ create table if not exists public.push_subscriptions (
   auth text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint push_subscriptions_endpoint_key unique (endpoint)
+  constraint push_subscriptions_user_endpoint_key unique (user_id, endpoint)
 );
 
 create index if not exists push_subscriptions_user_id_idx
