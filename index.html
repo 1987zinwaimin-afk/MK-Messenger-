@@ -61,6 +61,13 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 .emoji-picker button{background:transparent;color:var(--navy);padding:5px;font-size:20px}
 .reply-preview{flex:none}
 @media(max-width:760px){
+ body.mobile-chat-open header{height:72px;justify-content:flex-start;padding:0 12px}
+ body.mobile-chat-open header .brand,
+ body.mobile-chat-open header>.row:last-child{display:none!important}
+ body.mobile-chat-open header .menu-toggle{width:48px;height:48px;min-width:48px;padding:0;display:grid;place-items:center}
+ body.mobile-chat-open #cameraBtn,
+ body.mobile-chat-open #galleryBtn,
+ body.mobile-chat-open #voiceBtn{display:none!important}
  header{height:72px;padding:0 12px}.menu-toggle{display:block}
  .brand{font-size:19px}.wrap{margin:0 auto;padding:0 10px}
  .tabs{display:none;position:absolute;z-index:20;left:12px;right:12px;top:78px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 30px #081a3330;padding:10px;flex-direction:column;gap:6px}
