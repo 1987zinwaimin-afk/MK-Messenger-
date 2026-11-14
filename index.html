@@ -23,7 +23,7 @@ header{height:68px;background:var(--navy);color:#fff;display:flex;align-items:ce
 .person,.chatitem{padding:12px;border-radius:11px;cursor:pointer;display:flex;align-items:center;gap:12px}.person:hover,.chatitem:hover,.chatitem.active{background:#f0f4f8}.avatar{width:48px;height:48px;border-radius:50%;background:#e9dfc9;color:var(--navy);display:grid;place-items:center;font-weight:800;flex:none}.avatar-img{width:48px;height:48px;border-radius:50%;object-fit:cover;flex:none}.person-meta{min-width:0}
 .chathead{padding:16px;border-bottom:1px solid var(--line);font-weight:800;color:var(--navy);display:flex;align-items:center;gap:10px}.back-chat{display:none}
 .menu-toggle{display:none;font-size:22px;padding:8px 12px}
-.profile-editor{padding-top:8px}.profile-photo-wrap{display:flex;justify-content:center;margin:8px 0}.profile-photo,.profile-photo-fallback{width:104px;height:104px;border-radius:50%;object-fit:cover;border:3px solid var(--gold)}.profile-photo-fallback{display:grid;place-items:center;background:#f4e5bd;color:var(--navy);font-size:28px;font-weight:800}.share-card{border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}.share-card #profileQr{display:flex;justify-content:center;padding:12px;min-height:150px}
+.profile-editor{padding-top:8px}.profile-photo-wrap{display:flex;justify-content:center;margin:8px 0}.profile-photo,.profile-photo-fallback{width:104px;height:104px;border-radius:50%;object-fit:cover;border:3px solid var(--gold)}.profile-photo-fallback{display:grid;place-items:center;background:#f4e5bd;color:var(--navy);font-size:28px;font-weight:800}.avatar-file-label{display:block;text-align:center;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;color:var(--navy);font-weight:700;cursor:pointer}.crop-overlay{position:fixed;inset:0;z-index:1000;background:#06152ddd;display:flex;align-items:center;justify-content:center;padding:16px}.crop-dialog{width:min(100%,390px);background:#fff;border-radius:18px;padding:18px;box-shadow:0 18px 50px #0005}.crop-stage{width:min(72vw,260px);height:min(72vw,260px);margin:14px auto;border-radius:50%;overflow:hidden;border:4px solid var(--gold);background:#edf1f6;position:relative}.crop-stage img{width:100%;height:100%;object-fit:cover;transform-origin:center;will-change:transform}.crop-control{display:grid;grid-template-columns:82px 1fr;gap:10px;align-items:center;margin:10px 0}.crop-control input{padding:0;accent-color:var(--navy2)}.crop-actions{display:flex;gap:10px;margin-top:16px}.crop-actions button{flex:1}.share-card{border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}.share-card #profileQr{display:flex;justify-content:center;padding:12px;min-height:150px}
 select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink)}
 #messages{padding:18px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:9px;min-height:0;max-height:none}
 .bubble{max-width:78%;padding:10px 13px;border-radius:14px;background:#eef2f7;align-self:flex-start;white-space:pre-wrap;overflow-wrap:anywhere}.bubble.mine{background:var(--navy2);color:#fff;align-self:flex-end}.bubble .small{opacity:.7;margin-top:4px}
@@ -134,8 +134,17 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <div id="tab-profile" class="hidden"><div class="section-title">My profile</div>
 <div class="profile-editor stack">
 <div class="profile-photo-wrap"><img id="avatarPreview" alt="Profile photo" class="profile-photo hidden"><div id="avatarFallback" class="profile-photo-fallback">MK</div></div>
-<input id="avatarFile" type="file" accept="image/*" capture="user">
-<div class="small muted">Choose a photo from Gallery or Camera. Images are resized to 512 × 512. Maximum 5 MB.</div>
+<label class="avatar-file-label" for="avatarFile">Choose photo from Gallery / Camera</label><input id="avatarFile" type="file" accept="image/*" class="hidden">
+<div class="small muted">Choose a photo, adjust the crop, then save. Maximum 5 MB.</div>
+<div id="cropOverlay" class="crop-overlay hidden" role="dialog" aria-modal="true" aria-label="Adjust profile photo">
+ <div class="crop-dialog"><div class="section-title">Adjust profile photo</div><div class="small muted">Move and zoom the photo to fit the circle.</div>
+  <div class="crop-stage"><img id="cropImage" alt="Photo crop preview"></div>
+  <label class="crop-control"><span class="small">Zoom</span><input id="cropZoom" type="range" min="1" max="3" step="0.01" value="1"></label>
+  <label class="crop-control"><span class="small">Left / Right</span><input id="cropX" type="range" min="-100" max="100" step="1" value="0"></label>
+  <label class="crop-control"><span class="small">Up / Down</span><input id="cropY" type="range" min="-100" max="100" step="1" value="0"></label>
+  <div class="crop-actions"><button id="cancelCrop" class="secondary" type="button">Cancel</button><button id="saveCrop" type="button">Use this photo</button></div>
+ </div>
+</div>
 <input id="myusername" placeholder="Username"><input id="displayname" placeholder="Display name"><input id="bio" placeholder="About me"><input id="location" placeholder="Location"><input id="website" placeholder="Website">
 <label class="small muted">Profile visibility</label><select id="profileVisibility"><option value="everyone">All signed-in users</option><option value="friends">Friends only</option></select>
 <div class="row"><button id="saveprofile" class="grow">Save profile</button></div>
@@ -186,7 +195,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 (() => {
  const $=id=>document.getElementById(id);
  const cfg=window.MK_CONFIG||{};
- let sb=null,user=null,currentConversation=null,channel=null,profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0,hiddenMessageIds=new Set(),replaceTarget=null,voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceStartedAt=0,voiceDuration=0,voiceTimer=null,voiceBlob=null,voiceCancelled=false;
+ let sb=null,user=null,currentConversation=null,channel=null,profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0,hiddenMessageIds=new Set(),replaceTarget=null,voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceStartedAt=0,voiceDuration=0,voiceTimer=null,voiceBlob=null,voiceCancelled=false,cropSourceImage=null,cropSourceUrl=null,cropSourceFile=null;
  function note(msg){$('notice').textContent=msg;$('notice').style.display='block';}
  function clearNote(){$('notice').style.display='none';}
  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -479,12 +488,26 @@ async function uploadAndSend(file){
  function renderAvatar(url){$('avatarPreview').classList.toggle('hidden',!url);$('avatarFallback').classList.toggle('hidden',!!url);if(url)$('avatarPreview').src=url;}
 function profileUrl(){return location.origin+location.pathname+'?profile='+encodeURIComponent(profile?.username||'');}
 function renderProfileQr(){const box=$('profileQr');if(!box)return;box.innerHTML='';if(window.QRCode&&profile?.username)new QRCode(box,{text:profileUrl(),width:144,height:144,colorDark:'#081a33',colorLight:'#ffffff'});}
-async function uploadAvatar(file){if(!file)return;if(file.size>5*1024*1024)return note('Photo must be 5 MB or smaller.');if(!file.type.startsWith('image/'))return note('Please choose an image file.');
- const img=new Image(),url=URL.createObjectURL(file);img.src=url;await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;});
- const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const ctx=canvas.getContext('2d'),scale=Math.max(512/img.width,512/img.height),w=img.width*scale,h=img.height*scale;ctx.drawImage(img,(512-w)/2,(512-h)/2,w,h);URL.revokeObjectURL(url);
- const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',.88));if(!blob)return note('Could not process this photo.');
- const path=user.id+'/avatar.webp';const {error:upErr}=await sb.storage.from('profile-avatars').upload(path,blob,{contentType:'image/webp',upsert:true});if(upErr)return note(upErr.message);
- const {data}=sb.storage.from('profile-avatars').getPublicUrl(path);const {error}=await sb.from('profiles').update({avatar_url:data.publicUrl,updated_at:new Date().toISOString()}).eq('id',user.id);if(error)return note(error.message);await refreshProfile();note('Profile photo updated.');
+function updateCropPreview(){if(!cropSourceImage)return;const zoom=Number($('cropZoom').value),x=Number($('cropX').value),y=Number($('cropY').value);$('cropImage').style.transform=`translate(${x*.6}px,${y*.6}px) scale(${zoom})`;}
+function closeCrop(){ $('cropOverlay').classList.add('hidden');if(cropSourceUrl)URL.revokeObjectURL(cropSourceUrl);cropSourceUrl=null;cropSourceImage=null;cropSourceFile=null;$('avatarFile').value='';}
+function openAvatarCrop(file){if(!file)return;if(file.size>5*1024*1024){$('avatarFile').value='';return note('Photo must be 5 MB or smaller.');}if(!file.type.startsWith('image/')){$('avatarFile').value='';return note('Please choose an image file.');}
+ cropSourceFile=file;cropSourceUrl=URL.createObjectURL(file);cropSourceImage=new Image();cropSourceImage.onload=()=>{$('cropImage').src=cropSourceUrl;$('cropZoom').value='1';$('cropX').value='0';$('cropY').value='0';updateCropPreview();$('cropOverlay').classList.remove('hidden');};cropSourceImage.onerror=()=>{closeCrop();note('Could not open this photo. Please choose another image.');};cropSourceImage.src=cropSourceUrl;
+}
+async function uploadAvatar(){if(!cropSourceImage||!cropSourceFile)return;
+ const image=cropSourceImage,zoom=Number($('cropZoom').value),x=Number($('cropX').value),y=Number($('cropY').value);
+ const size=Math.min(image.naturalWidth,image.naturalHeight)/zoom;
+ const left=Math.max(0,Math.min(image.naturalWidth-size,(image.naturalWidth-size)/2*(1+x/100)));
+ const top=Math.max(0,Math.min(image.naturalHeight-size,(image.naturalHeight-size)/2*(1+y/100)));
+ const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const ctx=canvas.getContext('2d');ctx.drawImage(image,left,top,size,size,0,0,512,512);
+ const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',.9));if(!blob)return note('Could not process this photo.');
+ const saveButton=$('saveCrop');saveButton.disabled=true;saveButton.textContent='Saving…';
+ try{
+  const path=user.id+'/avatar.webp';const {error:upErr}=await sb.storage.from('profile-avatars').upload(path,blob,{contentType:'image/webp',cacheControl:'0',upsert:true});if(upErr)throw upErr;
+  const {data}=sb.storage.from('profile-avatars').getPublicUrl(path);const avatarUrl=data.publicUrl+(data.publicUrl.includes('?')?'&':'?')+'v='+Date.now();
+  const {error}=await sb.from('profiles').update({avatar_url:avatarUrl,updated_at:new Date().toISOString()}).eq('id',user.id);if(error)throw error;
+  closeCrop();await refreshProfile();note('Profile photo updated.');
+ }catch(error){note(error?.message||'Could not upload this photo. Please try again.');}
+ finally{saveButton.disabled=false;saveButton.textContent='Use this photo';}
 }
 async function saveProfile(){const username=$('myusername').value.trim();if(!/^[a-zA-Z0-9_]{3,24}$/.test(username))return note('Username must be 3–24 letters, numbers or underscores.');const website=$('website').value.trim();const {error}=await sb.from('profiles').update({username,display_name:$('displayname').value.trim(),bio:$('bio').value.trim(),location:$('location').value.trim(),website,profile_visibility:$('profileVisibility').value,updated_at:new Date().toISOString()}).eq('id',user.id);if(error)return note(error.message);await refreshProfile();note('Profile saved.');}
 function closeChat(){if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();currentConversation=null;document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('likeBtn').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
@@ -492,7 +515,11 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
  $('signin').onclick=()=>doAuth('signin');$('signup').onclick=()=>doAuth('signup');$('logout').onclick=async()=>{if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();if(channel)await sb.removeChannel(channel);await sb.auth.signOut();showAuth();};$('searchbtn').onclick=searchPeople;$('sendform').onsubmit=sendMessage;$('saveprofile').onclick=saveProfile;
  $('menuToggle').onclick=()=>$('menuPanel').classList.toggle('open');
  $('backToChats').onclick=closeChat;
- $('avatarFile').onchange=e=>uploadAvatar(e.target.files?.[0]);
+ $('avatarFile').onchange=e=>openAvatarCrop(e.target.files?.[0]);
+ $('cropZoom').oninput=updateCropPreview;$('cropX').oninput=updateCropPreview;$('cropY').oninput=updateCropPreview;
+ $('cancelCrop').onclick=closeCrop;$('saveCrop').onclick=uploadAvatar;
+ $('cropOverlay').addEventListener('click',e=>{if(e.target===$('cropOverlay'))closeCrop();});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('cropOverlay').classList.contains('hidden'))closeCrop();});
  $('copyProfileLink').onclick=async()=>{await navigator.clipboard.writeText(profileUrl());note('Profile link copied.');};
  $('shareProfileLink').onclick=async()=>{const url=profileUrl();if(navigator.share)await navigator.share({title:'MK Messenger profile',url});else{await navigator.clipboard.writeText(url);note('Profile link copied.');}};
 
