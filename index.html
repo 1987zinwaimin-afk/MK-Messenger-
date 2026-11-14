@@ -953,6 +953,9 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
  function syncVisualViewport(){const vv=window.visualViewport;if(!vv)return;document.documentElement.style.setProperty('--vvh',vv.height+'px');document.documentElement.style.setProperty('--vv-top',Math.max(0,vv.offsetTop)+'px');}
  syncVisualViewport();if(window.visualViewport){visualViewport.addEventListener('resize',syncVisualViewport);visualViewport.addEventListener('scroll',syncVisualViewport);}
 
+ if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(err=>console.warn('MK Messenger service worker registration failed:',err)));
+ }
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&currentConversation)markConversationRead();});
  window.addEventListener('pagehide',()=>{if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();if(channel)channel.untrack();});
  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
