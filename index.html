@@ -180,7 +180,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  async function sendRequest(id){const {error}=await sb.from('friend_requests').insert({sender_id:user.id,receiver_id:id});if(error)return note(error.message);note('Friend request sent.');}
  async function acceptRequest(id){const {error}=await sb.rpc('accept_friend_request',{p_request_id:id});if(error)return note(error.message);await loadRequests();await loadChats();note('Friend request accepted.');}
  async function openChat(id,title){
- currentConversation=id;document.body.classList.add('mobile-chat-open');$('menuPanel').classList.remove('open');replyTarget=null;showReplyPreview();$('chatname').textContent=title||'Conversation';$('onlineStatus').textContent='';$('typing').textContent='';$('message').disabled=false;$('send').disabled=false;
+ clearNote();currentConversation=id;document.body.classList.add('mobile-chat-open');$('menuPanel').classList.remove('open');replyTarget=null;showReplyPreview();$('chatname').textContent=title||'Conversation';$('onlineStatus').textContent='';$('typing').textContent='';$('message').disabled=false;$('send').disabled=false;
  if(channel){await sb.removeChannel(channel);channel=null;}
  await loadMessages();
  channel=sb.channel('conversation-'+id,{config:{presence:{key:user.id}}})
@@ -211,7 +211,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
      if(error||!data?.signedUrl){content.textContent='Attachment unavailable';return;}
      if(m.message_type==='image'){const img=document.createElement('img');img.className='media-image';img.src=data.signedUrl;img.alt='Shared image';img.loading='lazy';img.onclick=()=>window.open(data.signedUrl,'_blank','noopener');content.appendChild(img);}
      else if(m.message_type==='video'){const video=document.createElement('video');video.className='media-video';video.src=data.signedUrl;video.controls=true;video.playsInline=true;content.appendChild(video);}
-     else {const link=document.createElement('a');link.className='media-file';link.href=data.signedUrl;link.target='_blank';link.rel='noopener';link.textContent='📎 '+(m.file_name||'Download file');content.appendChild(link);}
+     else {const link=document.createElement('a');link.className='media-file';link.href=data.signedUrl;link.target='_blank';link.rel='noopener';link.textContent='📎 '+(m.file_name||m.body.split('/').pop()||'Download file');content.appendChild(link);}
    });
  }else content.textContent=m.body;
  $('messages').querySelector('.empty')?.remove();
