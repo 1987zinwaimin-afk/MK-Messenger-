@@ -21,6 +21,11 @@ header{height:68px;background:var(--navy);color:#fff;display:flex;align-items:ce
 #app{display:none}.layout{display:grid;grid-template-columns:300px 1fr;gap:16px;min-height:70vh}.side{padding:16px}.main{display:flex;flex-direction:column;min-height:70vh;overflow:hidden}.section-title{font-weight:800;color:var(--navy);margin:12px 0 8px}
 .tabs{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 16px}.tabs button{font-size:13px;padding:8px 10px;width:auto;min-width:0}.tabs button.active{background:var(--gold);color:var(--navy)}.tabs .menu-logout{margin-top:3px}
 .person,.chatitem{padding:12px;border-radius:11px;cursor:pointer;display:flex;align-items:center;gap:12px}.person:hover,.chatitem:hover,.chatitem.active{background:#f0f4f8}.avatar{width:48px;height:48px;border-radius:50%;background:#e9dfc9;color:var(--navy);display:grid;place-items:center;font-weight:800;flex:none}.avatar-img{width:48px;height:48px;border-radius:50%;object-fit:cover;flex:none}.person-meta{min-width:0}
+#enableNotifications{font-size:12px;padding:7px 10px;min-height:32px;border-radius:9px;white-space:nowrap}
+.unread-badge{margin-left:auto;min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:var(--gold);color:var(--navy);font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+.chatitem .person-meta{min-width:0}
+@media(max-width:760px){#enableNotifications{font-size:11px;padding:6px 8px;min-height:30px}}
+
 .chathead{padding:16px;border-bottom:1px solid var(--line);font-weight:800;color:var(--navy);display:flex;align-items:center;gap:10px}.back-chat{display:none}
 .menu-toggle{display:none;font-size:22px;padding:8px 12px}
 .profile-editor{padding-top:2px;display:grid;gap:9px;width:min(100%,560px);margin:0 auto}
@@ -153,7 +158,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 </style>
 </head>
 <body>
-<header><div class="row"><button id="menuToggle" class="menu-toggle secondary" aria-label="Open menu">☰</button><div class="brand">MK <span>Messenger</span></div></div><div class="row"><span id="who" class="small"></span></div></header>
+<header><div class="row"><button id="menuToggle" class="menu-toggle secondary" aria-label="Open menu">☰</button><div class="brand">MK <span>Messenger</span></div></div><div class="row"><button id="enableNotifications" class="secondary" type="button">🔔 Notifications</button><span id="who" class="small"></span></div></header>
 <div class="wrap">
 <div id="notice"></div>
 <section id="auth" class="panel auth">
@@ -258,7 +263,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 (() => {
  const $=id=>document.getElementById(id);
  const cfg=window.MK_CONFIG||{};
- let sb=null,user=null,currentConversation=null,currentConversationKind='direct',channel=null,profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0,hiddenMessageIds=new Set(),replaceTarget=null,voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceStartedAt=0,voiceDuration=0,voiceTimer=null,voiceBlob=null,voiceCancelled=false,cropSourceImage=null,cropSourceUrl=null,cropSourceFile=null;
+ let sb=null,user=null,currentConversation=null,currentConversationKind='direct',channel=null,inboxChannel=null,profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0,hiddenMessageIds=new Set(),replaceTarget=null,voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceStartedAt=0,voiceDuration=0,voiceTimer=null,voiceBlob=null,voiceCancelled=false,cropSourceImage=null,cropSourceUrl=null,cropSourceFile=null;
  function note(msg){$('notice').textContent=msg;$('notice').style.display='block';}
  function clearNote(){$('notice').style.display='none';}
  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -268,7 +273,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  async function refreshProfile(){const {data,error}=await sb.from('profiles').select('*').eq('id',user.id).maybeSingle();if(error)throw error;profile=data;if(!data){note('Your profile is not ready yet. Please sign out and sign in again, or check the database setup.');return;}$('who').textContent='@'+data.username;$('myusername').value=data.username;$('displayname').value=data.display_name||'';$('bio').value=data.bio||'';$('location').value=data.location||'';$('website').value=data.website||'';$('profileVisibility').value=data.profile_visibility||'everyone';renderAvatar(data.avatar_url);renderProfileQr();}
  async function boot(){sb=client();if(!sb)return;const {data:{session}}=await sb.auth.getSession();if(session){user=session.user;await enter();}sb.auth.onAuthStateChange(async(_event,session)=>{user=session?.user||null;if(user){await enter();}else{showAuth();}});}
  function showAuth(){$('auth').style.display='block';$('app').style.display='none';$('logout').classList.add('hidden');$('who').textContent='';}
- async function enter(){clearNote();$('auth').style.display='none';$('app').style.display='block';$('logout').classList.remove('hidden');try{await refreshProfile();await loadChats();await loadRequests();}catch(e){note(e.message||String(e));}}
+ async function enter(){clearNote();$('auth').style.display='none';$('app').style.display='block';$('logout').classList.remove('hidden');try{await refreshProfile();await loadChats();await loadRequests();await setupInboxChannel();}catch(e){note(e.message||String(e));}}
  async function doAuth(kind){clearNote();const email=$('email').value.trim(),password=$('password').value,username=$('username').value.trim();if(!email||!password)return note('Enter your email and password.');if(kind==='signup'&&!/^[a-zA-Z0-9_]{3,24}$/.test(username))return note('Choose a username using 3–24 letters, numbers or underscores.');let result;
  if(kind==='signup')result=await sb.auth.signUp({email,password,options:{data:{username,display_name:username}}});
  else result=await sb.auth.signInWithPassword({email,password});
@@ -285,10 +290,47 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  if(!other){const q=await sb.from('conversation_members').select('user_id,profiles(id,username,display_name,avatar_url)').eq('conversation_id',c.id).neq('user_id',user.id).maybeSingle();other=q.data?.profiles||null;}
  if(other&&!acceptedIds.has(other.id))return null;return {c,other};}));
  const groups=rows.filter(x=>x.conversations?.kind==='group').map(x=>({c:x.conversations,other:null}));
- const list=[...people.filter(Boolean),...groups];$('chatlist').innerHTML=list.length?list.map(({c,other})=>{const name=other?.display_name||other?.username||c.title||'Direct chat',avatar=other?.avatar_url?'<img src="'+esc(other.avatar_url)+'" alt="" class="avatar-img">':'<div class="avatar">'+initials(name)+'</div>';return '<div class="chatitem '+(currentConversation===c.id?'active':'')+'" data-id="'+c.id+'" data-title="'+esc(name)+'">'+avatar+'<div class="person-meta"><b>'+esc(name)+'</b><div class="small muted">'+(other?.username?'@'+esc(other.username):esc(c.kind))+'</div></div></div>';}).join(''):'No friends yet. Find people and add a friend to start chatting.';
+ const list=[...people.filter(Boolean),...groups],conversationIds=[...new Set(list.map(x=>x.c.id))];
+ const unread=new Map();
+ if(conversationIds.length){
+  const {data:recentMessages,error:msgError}=await sb.from('messages').select('id,conversation_id,sender_id').in('conversation_id',conversationIds).neq('sender_id',user.id).is('deleted_at',null).order('created_at',{ascending:false}).limit(2000);
+  if(msgError)console.warn('Unread messages:',msgError.message);
+  else{
+   const mids=(recentMessages||[]).map(m=>m.id);let readIds=new Set();
+   if(mids.length){const {data:receipts,error:receiptError}=await sb.from('message_receipts').select('message_id,read_at').eq('user_id',user.id).in('message_id',mids);if(!receiptError)readIds=new Set((receipts||[]).filter(r=>r.read_at).map(r=>r.message_id));}
+   for(const m of recentMessages||[])if(!readIds.has(m.id))unread.set(m.conversation_id,(unread.get(m.conversation_id)||0)+1);
+  }
+ }
+ $('chatlist').innerHTML=list.length?list.map(({c,other})=>{const name=other?.display_name||other?.username||c.title||'Direct chat',avatar=other?.avatar_url?'<img src="'+esc(other.avatar_url)+'" alt="" class="avatar-img">':'<div class="avatar">'+initials(name)+'</div>',count=currentConversation===c.id?0:(unread.get(c.id)||0),badge=count?'<span class="unread-badge">'+(count>99?'99+':count)+'</span>':'';return '<div class="chatitem '+(currentConversation===c.id?'active':'')+'" data-id="'+c.id+'" data-title="'+esc(name)+'">'+avatar+'<div class="person-meta"><b>'+esc(name)+'</b><div class="small muted">'+(other?.username?'@'+esc(other.username):esc(c.kind))+'</div></div>'+badge+'</div>';}).join(''):'No friends yet. Find people and add a friend to start chatting.';
  $('chatlist').querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>openChat(el.dataset.id,el.dataset.title));
 }
- async function openGroupCreator(){
+async function setupInboxChannel(){
+ if(!user||!sb)return;
+ if(inboxChannel){await sb.removeChannel(inboxChannel);inboxChannel=null;}
+ inboxChannel=sb.channel('inbox-'+user.id)
+  .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},async payload=>{
+   const m=payload.new;if(!m||m.sender_id===user.id)return;
+   await loadChats().catch(e=>console.warn('Inbox refresh:',e.message));
+   if(currentConversation!==m.conversation_id){
+    const {data:conv}=await sb.from('conversations').select('title,kind').eq('id',m.conversation_id).maybeSingle();
+    const title=conv?.title||'New message';
+    note('New message in '+title);
+    if('Notification' in window&&Notification.permission==='granted'){
+     try{new Notification(title,{body:'You have a new message in MK Messenger.',tag:'mk-'+m.conversation_id});}catch(e){console.warn('Notification:',e);}
+    }
+    setTimeout(clearNote,3500);
+   }
+  }).subscribe();
+}
+async function enableBrowserNotifications(){
+ if(!('Notification' in window))return note('This browser does not support notifications.');
+ try{
+  const permission=await Notification.requestPermission();
+  if(permission==='granted'){ $('enableNotifications').textContent='🔔 Notifications on';note('Notifications enabled while MK Messenger is open.');}
+  else note('Notification permission was not granted. You can enable it in browser settings.');
+ }catch(e){note('Could not request notification permission: '+(e.message||String(e)));}
+}
+async function openGroupCreator(){
   $('groupTitle').value='';$('groupFriends').innerHTML='<div class="small muted">Loading friends…</div>';
   $('groupOverlay').classList.remove('hidden');
   const {data:links,error}=await sb.from('friend_requests').select('sender_id,receiver_id').eq('status','accepted').or('sender_id.eq.'+user.id+',receiver_id.eq.'+user.id);
@@ -689,6 +731,7 @@ async function uploadAvatar(){if(!cropSourceImage||!cropSourceFile)return;
 async function saveProfile(){const username=$('myusername').value.trim();if(!/^[a-zA-Z0-9_]{3,24}$/.test(username))return note('Username must be 3–24 letters, numbers or underscores.');const website=$('website').value.trim();const {error}=await sb.from('profiles').update({username,display_name:$('displayname').value.trim(),bio:$('bio').value.trim(),location:$('location').value.trim(),website,profile_visibility:$('profileVisibility').value,updated_at:new Date().toISOString()}).eq('id',user.id);if(error)return note(error.message);await refreshProfile();note('Profile saved.');}
 function closeChat(){if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();currentConversation=null;currentConversationKind='direct';$('groupInfoBtn').classList.add('hidden');$('chatname').textContent='Select a conversation';document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('likeBtn').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
 function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();}
+ $('enableNotifications').onclick=enableBrowserNotifications;
  $('groupInfoBtn').onclick=openGroupManage;
  $('closeGroupManage').onclick=closeGroupManage;
  $('groupManageOverlay').addEventListener('click',e=>{if(e.target===$('groupManageOverlay'))closeGroupManage();});
@@ -697,7 +740,7 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
  $('createGroupBtn').onclick=openGroupCreator;
  $('cancelGroup').onclick=closeGroupCreator;$('saveGroup').onclick=createGroup;
  $('groupOverlay').addEventListener('click',e=>{if(e.target===$('groupOverlay'))closeGroupCreator();});
- $('signin').onclick=()=>doAuth('signin');$('signup').onclick=()=>doAuth('signup');$('logout').onclick=async()=>{if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();if(channel)await sb.removeChannel(channel);await sb.auth.signOut();showAuth();};$('searchbtn').onclick=searchPeople;$('sendform').onsubmit=sendMessage;$('saveprofile').onclick=saveProfile;
+ $('signin').onclick=()=>doAuth('signin');$('signup').onclick=()=>doAuth('signup');$('logout').onclick=async()=>{if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();if(channel)await sb.removeChannel(channel);if(inboxChannel)await sb.removeChannel(inboxChannel);inboxChannel=null;await sb.auth.signOut();showAuth();};$('searchbtn').onclick=searchPeople;$('sendform').onsubmit=sendMessage;$('saveprofile').onclick=saveProfile;
  $('menuToggle').onclick=()=>$('menuPanel').classList.toggle('open');
  $('backToChats').onclick=closeChat;
  $('galleryAvatarBtn').onclick=()=>{$('avatarFile').value='';$('avatarFile').click();};
