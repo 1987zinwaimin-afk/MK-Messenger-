@@ -134,8 +134,10 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <div id="tab-profile" class="hidden"><div class="section-title">My profile</div>
 <div class="profile-editor stack">
 <div class="profile-photo-wrap"><img id="avatarPreview" alt="Profile photo" class="profile-photo hidden"><div id="avatarFallback" class="profile-photo-fallback">MK</div></div>
-<label class="avatar-file-label" for="avatarFile">Choose photo from Gallery / Camera</label><input id="avatarFile" type="file" accept="image/*" class="avatar-file-input">
-<div class="small muted">Choose a photo, adjust the crop, then save. Maximum 5 MB.</div>
+<div class="row avatar-pick-actions"><button id="galleryAvatarBtn" class="secondary grow" type="button">Choose from Gallery</button><button id="cameraAvatarBtn" class="gold grow" type="button">Take Photo</button></div>
+<input id="avatarFile" type="file" accept="image/*" class="avatar-file-input">
+<input id="cameraAvatarFile" type="file" accept="image/*" capture="user" class="avatar-file-input">
+<div class="small muted">Choose a photo from Gallery or take a new photo with Camera. Adjust the crop before saving. Maximum 5 MB.</div>
 <div id="cropOverlay" class="crop-overlay hidden" role="dialog" aria-modal="true" aria-label="Adjust profile photo">
  <div class="crop-dialog"><div class="section-title">Adjust profile photo</div><div class="small muted">Move and zoom the photo to fit the circle.</div>
   <div class="crop-stage"><img id="cropImage" alt="Photo crop preview"></div>
@@ -515,7 +517,10 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
  $('signin').onclick=()=>doAuth('signin');$('signup').onclick=()=>doAuth('signup');$('logout').onclick=async()=>{if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();if(channel)await sb.removeChannel(channel);await sb.auth.signOut();showAuth();};$('searchbtn').onclick=searchPeople;$('sendform').onsubmit=sendMessage;$('saveprofile').onclick=saveProfile;
  $('menuToggle').onclick=()=>$('menuPanel').classList.toggle('open');
  $('backToChats').onclick=closeChat;
+ $('galleryAvatarBtn').onclick=()=>{$('avatarFile').value='';$('avatarFile').click();};
+ $('cameraAvatarBtn').onclick=()=>{$('cameraAvatarFile').value='';$('cameraAvatarFile').click();};
  $('avatarFile').onchange=e=>openAvatarCrop(e.target.files?.[0]);
+ $('cameraAvatarFile').onchange=e=>openAvatarCrop(e.target.files?.[0]);
  $('cropZoom').oninput=updateCropPreview;$('cropX').oninput=updateCropPreview;$('cropY').oninput=updateCropPreview;
  $('cancelCrop').onclick=closeCrop;$('saveCrop').onclick=uploadAvatar;
  $('cropOverlay').addEventListener('click',e=>{if(e.target===$('cropOverlay'))closeCrop();});
