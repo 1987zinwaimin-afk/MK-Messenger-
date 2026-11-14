@@ -24,6 +24,16 @@ header{height:68px;background:var(--navy);color:#fff;display:flex;align-items:ce
 .chathead{padding:16px;border-bottom:1px solid var(--line);font-weight:800;color:var(--navy);display:flex;align-items:center;gap:10px}.back-chat{display:none}
 .menu-toggle{display:none;font-size:22px;padding:8px 12px}
 .profile-editor{padding-top:2px;display:grid;gap:9px;width:min(100%,560px);margin:0 auto}
+.chatlist-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.chatlist-heading button{font-size:12px;padding:7px 10px;min-height:32px;border-radius:9px;white-space:nowrap}
+.group-dialog{width:min(100%,430px);max-height:min(82dvh,680px);overflow:auto}
+.group-dialog input{margin:6px 0 10px}
+.group-friends{display:grid;gap:5px;max-height:42dvh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:7px}
+.group-friend{display:flex;align-items:center;gap:10px;padding:8px;border-radius:9px;background:#f8fafc;cursor:pointer}
+.group-friend input{width:18px;height:18px;flex:none;margin:0;accent-color:var(--navy2)}
+.group-friend .avatar-img,.group-friend .avatar{width:36px;height:36px}
+@media(max-width:760px){.chatlist-heading button{font-size:11px;padding:6px 9px;min-height:30px}.group-dialog{padding:15px}.group-friends{max-height:38dvh}}
+
 #tab-profile>.section-title{font-size:18px;margin:4px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .profile-photo-wrap{display:flex;justify-content:center;margin:2px 0 5px}
 .profile-photo,.profile-photo-fallback{width:88px;height:88px;border-radius:50%;object-fit:cover;border:3px solid var(--gold)}
@@ -150,7 +160,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <nav class="tabs" id="menuPanel"><button class="active" data-tab="chats">Chats</button><button data-tab="friends">Find people</button><button data-tab="requests">Requests</button><button data-tab="profile">My profile</button><button id="logout" class="secondary hidden menu-logout" type="button">Log out</button></nav>
 <div class="layout">
 <aside class="panel side">
-<div id="tab-chats"><div class="section-title">Conversations</div><div id="chatlist" class="muted small">Loading…</div></div>
+<div id="tab-chats"><div class="section-title chatlist-heading"><span>Conversations</span><button id="createGroupBtn" class="secondary" type="button">+ Group</button></div><div id="chatlist" class="muted small">Loading…</div></div>
 <div id="tab-friends" class="hidden"><div class="section-title">Find people</div><div class="row"><input id="search" placeholder="Search username"><button id="searchbtn">Find</button></div><div id="searchresults"></div></div>
 <div id="tab-requests" class="hidden"><div class="section-title">Friend requests</div><div id="requestslist" class="muted small">Loading…</div></div>
 <div id="tab-profile" class="hidden"><div class="section-title">My profile</div>
@@ -207,7 +217,17 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <div id="emojiPicker" class="emoji-picker hidden">
  <button type="button">😀</button><button type="button">😂</button><button type="button">🥰</button><button type="button">😍</button><button type="button">🙏</button><button type="button">❤️</button><button type="button">👍</button><button type="button">🎉</button>
 </div>
-</main></div></section>
+</main>
+<div id="groupOverlay" class="crop-overlay hidden" role="dialog" aria-modal="true" aria-label="Create group chat">
+ <div class="crop-dialog group-dialog">
+  <div class="section-title">Create group chat</div>
+  <p class="small muted">Choose a name and add friends to start a group.</p>
+  <input id="groupTitle" maxlength="80" placeholder="Group name">
+  <div id="groupFriends" class="group-friends"><div class="small muted">Loading friends…</div></div>
+  <div class="crop-actions"><button id="cancelGroup" class="secondary" type="button">Cancel</button><button id="saveGroup" type="button">Create group</button></div>
+ </div>
+</div>
+</div></section>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -249,6 +269,30 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  const list=[...people.filter(Boolean),...groups];$('chatlist').innerHTML=list.length?list.map(({c,other})=>{const name=other?.display_name||other?.username||c.title||'Direct chat',avatar=other?.avatar_url?'<img src="'+esc(other.avatar_url)+'" alt="" class="avatar-img">':'<div class="avatar">'+initials(name)+'</div>';return '<div class="chatitem '+(currentConversation===c.id?'active':'')+'" data-id="'+c.id+'" data-title="'+esc(name)+'">'+avatar+'<div class="person-meta"><b>'+esc(name)+'</b><div class="small muted">'+(other?.username?'@'+esc(other.username):esc(c.kind))+'</div></div></div>';}).join(''):'No friends yet. Find people and add a friend to start chatting.';
  $('chatlist').querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>openChat(el.dataset.id,el.dataset.title));
 }
+ async function openGroupCreator(){
+  $('groupTitle').value='';$('groupFriends').innerHTML='<div class="small muted">Loading friends…</div>';
+  $('groupOverlay').classList.remove('hidden');
+  const {data:links,error}=await sb.from('friend_requests').select('sender_id,receiver_id').eq('status','accepted').or('sender_id.eq.'+user.id+',receiver_id.eq.'+user.id);
+  if(error){$('groupFriends').textContent='Could not load friends: '+error.message;return;}
+  const ids=[...new Set((links||[]).map(r=>r.sender_id===user.id?r.receiver_id:r.sender_id))];
+  if(!ids.length){$('groupFriends').innerHTML='<div class="empty">Add friends before creating a group.</div>';return;}
+  const {data:friends,error:friendError}=await sb.from('profiles').select('id,username,display_name,avatar_url').in('id',ids).order('username');
+  if(friendError){$('groupFriends').textContent='Could not load friends: '+friendError.message;return;}
+  $('groupFriends').innerHTML=(friends||[]).map(p=>'<label class="group-friend"><input type="checkbox" name="groupMember" value="'+p.id+'">'+(p.avatar_url?'<img class="avatar-img" src="'+esc(p.avatar_url)+'" alt="">':'<span class="avatar">'+initials(p.username)+'</span>')+'<span class="person-meta"><b>'+esc(p.display_name||p.username)+'</b><span class="small muted">@'+esc(p.username)+'</span></span></label>').join('')||'<div class="empty">No available friends.</div>';
+ }
+ function closeGroupCreator(){$('groupOverlay').classList.add('hidden');}
+ async function createGroup(){
+  const title=$('groupTitle').value.trim(),ids=[...$('groupFriends').querySelectorAll('input[name="groupMember"]:checked')].map(x=>x.value);
+  if(title.length<2||title.length>80)return note('Group name must be 2–80 characters.');
+  if(!ids.length)return note('Choose at least one friend.');
+  $('saveGroup').disabled=true;
+  try{
+   const {data,error}=await sb.rpc('create_group',{p_title:title,p_member_ids:ids});
+   if(error)throw error;
+   closeGroupCreator();await loadChats();await openChat(data,title);note('Group created.');
+  }catch(err){note('Could not create group: '+(err.message||String(err)));}
+  finally{$('saveGroup').disabled=false;}
+ }
  async function loadRequests(){const {data,error}=await sb.from('friend_requests').select('id,sender_id,receiver_id,status,profiles!friend_requests_sender_id_fkey(username,display_name)').eq('receiver_id',user.id).eq('status','pending');if(error){$('requestslist').textContent=error.message;return;}$('requestslist').innerHTML=(data||[]).length?data.map(r=>`<div class="person"><div class="avatar">${initials(r.profiles?.username)}</div><div class="grow"><b>@${esc(r.profiles?.username||'user')}</b></div><button data-accept="${r.id}">Accept</button></div>`).join(''):'No pending requests.';$('requestslist').querySelectorAll('[data-accept]').forEach(b=>b.onclick=()=>acceptRequest(b.dataset.accept));}
  async function searchPeople(){const q=$('search').value.trim();if(q.length<3)return note('Enter at least 3 characters.');const {data,error}=await sb.from('profiles').select('id,username,display_name,bio').ilike('username',`%${q}%`).neq('id',user.id).limit(20);if(error)return note(error.message);$('searchresults').innerHTML=(data||[]).length?data.map(p=>`<div class="person"><div class="avatar">${initials(p.username)}</div><div class="grow"><b>@${esc(p.username)}</b><div class="small muted">${esc(p.display_name||'')}</div></div><button data-friend="${p.id}">Add</button></div>`).join(''):'No users found.';$('searchresults').querySelectorAll('[data-friend]').forEach(b=>b.onclick=()=>sendRequest(b.dataset.friend));}
  async function sendRequest(id){const {error}=await sb.from('friend_requests').insert({sender_id:user.id,receiver_id:id});if(error)return note(error.message);note('Friend request sent.');}
@@ -543,6 +587,9 @@ async function uploadAvatar(){if(!cropSourceImage||!cropSourceFile)return;
 async function saveProfile(){const username=$('myusername').value.trim();if(!/^[a-zA-Z0-9_]{3,24}$/.test(username))return note('Username must be 3–24 letters, numbers or underscores.');const website=$('website').value.trim();const {error}=await sb.from('profiles').update({username,display_name:$('displayname').value.trim(),bio:$('bio').value.trim(),location:$('location').value.trim(),website,profile_visibility:$('profileVisibility').value,updated_at:new Date().toISOString()}).eq('id',user.id);if(error)return note(error.message);await refreshProfile();note('Profile saved.');}
 function closeChat(){if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();currentConversation=null;document.body.classList.remove('mobile-chat-open');$('message').value='';$('message').disabled=true;$('likeBtn').disabled=true;if(channel){sb.removeChannel(channel);channel=null;}loadChats();}
 function setTab(tab){if(currentConversation)closeChat();document.body.classList.remove('mobile-chat-open');document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x.dataset.tab===tab));['chats','friends','requests','profile'].forEach(t=>$('tab-'+t).classList.toggle('hidden',t!==tab));$('menuPanel').classList.remove('open');if(tab==='chats')loadChats();}
+ $('createGroupBtn').onclick=openGroupCreator;
+ $('cancelGroup').onclick=closeGroupCreator;$('saveGroup').onclick=createGroup;
+ $('groupOverlay').addEventListener('click',e=>{if(e.target===$('groupOverlay'))closeGroupCreator();});
  $('signin').onclick=()=>doAuth('signin');$('signup').onclick=()=>doAuth('signup');$('logout').onclick=async()=>{if(voiceRecorder&&voiceRecorder.state!=='inactive')cancelVoiceRecording();if(channel)await sb.removeChannel(channel);await sb.auth.signOut();showAuth();};$('searchbtn').onclick=searchPeople;$('sendform').onsubmit=sendMessage;$('saveprofile').onclick=saveProfile;
  $('menuToggle').onclick=()=>$('menuPanel').classList.toggle('open');
  $('backToChats').onclick=closeChat;
