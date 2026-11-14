@@ -17,8 +17,9 @@ This roadmap is additive. Preserve the existing production URL, GitHub repositor
 - Preserve existing Delete for Me and permanent Delete for Everyone semantics.
 
 ## Phase 3 — Notifications
-- Add Web Push subscriptions and a service worker for background notifications.
-- Store each user's push subscription securely and support unsubscribe/revocation.
+- Add Web Push subscriptions and a service worker for background notifications. (service-worker push display and click handling implemented on feature branch; delivery is not active yet)
+- Store each user's push subscription securely and support unsubscribe/revocation. (pending isolated schema + RLS review)
+- Add an authenticated server-side push sender using VAPID secrets; never expose private keys or service-role credentials in the browser. (pending VAPID key setup)
 - Keep foreground notifications working and avoid exposing service-role credentials in the browser.
 
 ## Phase 4 — Voice and video calling
