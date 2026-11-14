@@ -28,7 +28,18 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 #onlineStatus{font-size:11px;color:var(--muted);margin-left:8px}
 .reply-preview{display:none;padding:8px 12px;background:#f7f4ed;border-top:1px solid var(--line);font-size:12px;color:var(--navy)}
 .reply-preview.show{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.composer{display:flex;gap:9px;padding:14px;border-top:1px solid var(--line);background:#fff}.composer input{flex:1}
+.composer{display:flex;align-items:center;gap:7px;padding:10px 12px;border-top:1px solid var(--line);background:#fff;position:relative;flex:none}
+.composer .tool-btn{width:32px;height:42px;min-width:32px;padding:0;border-radius:50%;background:transparent;color:#152fce;font-size:22px;display:grid;place-items:center;flex:none}
+.composer .tool-btn:disabled{opacity:.35}
+.message-pill{display:flex;align-items:center;gap:2px;flex:1;min-width:0;border-radius:24px;background:#f0f1f6;padding:0 8px 0 14px;height:42px}
+.message-pill input{border:0!important;box-shadow:none!important;background:transparent!important;padding:8px 0!important;min-width:0;flex:1;font-size:15px}
+.inline-tool{background:transparent;color:#152fce;padding:0 3px;font-size:21px;border-radius:50%;flex:none}
+.composer .like-btn{font-size:22px;width:34px;min-width:34px}
+.attach-menu{position:absolute;z-index:30;bottom:64px;left:12px;background:#fff;border:1px solid var(--line);box-shadow:0 8px 24px #081a3330;border-radius:14px;padding:8px;display:grid;gap:5px;min-width:160px}
+.attach-menu button{background:transparent;color:var(--navy);text-align:left;padding:10px}
+.emoji-picker{position:absolute;z-index:31;right:45px;bottom:64px;background:white;border:1px solid var(--line);box-shadow:0 8px 24px #081a3330;border-radius:14px;padding:8px;display:grid;grid-template-columns:repeat(4,36px);gap:4px}
+.emoji-picker button{background:transparent;color:var(--navy);padding:5px;font-size:20px}
+.reply-preview{flex:none}
 @media(max-width:760px){
  header{height:72px;padding:0 12px}.menu-toggle{display:block}
  .brand{font-size:19px}.wrap{margin:0 auto;padding:0 10px}
@@ -42,7 +53,16 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  .back-chat{display:inline-flex;flex:none}
  #messages{flex:1;min-height:0;overflow-y:auto;max-height:none}
  .chathead{position:relative;flex:none}
- .composer{position:sticky;bottom:0;padding:12px;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+ .composer{position:relative;bottom:auto;padding:8px 10px;padding-bottom:max(8px,env(safe-area-inset-bottom));gap:5px}
+ .composer .tool-btn{width:27px;min-width:27px;font-size:19px}
+ .message-pill{height:40px;padding-left:12px}
+ .composer .like-btn{width:30px;min-width:30px}
+ #chatPanel{position:fixed;left:0;right:0;top:var(--vv-top,72px);height:calc(var(--vvh, 100dvh) - var(--vv-top,72px));z-index:5;border-radius:0;overflow:hidden}
+ #chatPanel .chathead{flex:none}
+ #chatPanel #messages{flex:1;min-height:0;overflow-y:auto}
+ #chatPanel .composer{flex:none}
+ body.keyboard-open #chatPanel{height:calc(var(--vvh, 100dvh) - var(--vv-top,72px))}
+
  .profile-editor{max-width:100%}
 }
 #notice{margin:12px 0;padding:10px 12px;border-radius:10px;background:#fff5dc;color:#694d12;display:none}
@@ -86,7 +106,25 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <div id="typing"></div>
 <div id="messages"><div class="empty">Choose a conversation or find a friend to start chatting.</div></div>
 <div id="replypreview" class="reply-preview"><span id="replytext"></span><button type="button" class="secondary" id="cancelreply">Cancel</button></div>
-<form id="sendform" class="composer"><input id="message" placeholder="Write a message…" maxlength="10000" autocomplete="off" disabled><button id="send" disabled>Send</button></form>
+<div id="attachMenu" class="attach-menu hidden">
+ <button type="button" data-attach="camera">Take photo</button>
+ <button type="button" data-attach="gallery">Photo / video</button>
+ <button type="button" data-attach="file">Choose file</button>
+</div>
+<input id="cameraInput" class="hidden" type="file" accept="image/*" capture="environment">
+<input id="galleryInput" class="hidden" type="file" accept="image/*,video/*">
+<input id="fileInput" class="hidden" type="file">
+<form id="sendform" class="composer">
+ <button id="attachBtn" class="tool-btn" type="button" aria-label="Attachments">＋</button>
+ <button id="cameraBtn" class="tool-btn" type="button" aria-label="Camera">▣</button>
+ <button id="galleryBtn" class="tool-btn" type="button" aria-label="Gallery">▧</button>
+ <button id="voiceBtn" class="tool-btn" type="button" aria-label="Voice typing">♩</button>
+ <div class="message-pill"><input id="message" placeholder="Message" maxlength="10000" autocomplete="off" disabled><button id="emojiBtn" class="inline-tool" type="button" aria-label="Emoji">☺</button></div>
+ <button id="likeBtn" class="tool-btn like-btn" type="submit" aria-label="Send like">👍</button>
+</form>
+<div id="emojiPicker" class="emoji-picker hidden">
+ <button type="button">😀</button><button type="button">😂</button><button type="button">🥰</button><button type="button">😍</button><button type="button">🙏</button><button type="button">❤️</button><button type="button">👍</button><button type="button">🎉</button>
+</div>
 </main></div></section>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -182,7 +220,7 @@ async function sendTyping(){if(!channel||!currentConversation)return;const now=D
  rows.forEach(m=>appendMessage(m,receiptMap.get(m.id)||null,replyMap.get(m.reply_to_id)||''));
 }
  async function sendMessage(e){
- e.preventDefault();const body=$('message').value.trim();if(!body||!currentConversation)return;
+ e.preventDefault();const body=$('message').value.trim()||'👍';if(!currentConversation)return;
  const payload={conversation_id:currentConversation,sender_id:user.id,body,message_type:'text',...(replyTarget?{reply_to_id:replyTarget.id}:{})};
  const {data,error}=await sb.from('messages').insert(payload).select().single();if(error)return note(error.message);
  appendMessage(data,null,replyTarget?.body||'');$('message').value='';replyTarget=null;showReplyPreview();
@@ -208,7 +246,24 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
  $('shareProfileLink').onclick=async()=>{const url=profileUrl();if(navigator.share)await navigator.share({title:'MK Messenger profile',url});else{await navigator.clipboard.writeText(url);note('Profile link copied.');}};
 
  $('cancelreply').onclick=()=>{replyTarget=null;showReplyPreview();};
+ $('attachBtn').onclick=()=>{$('attachMenu').classList.toggle('hidden');$('emojiPicker').classList.add('hidden');};
+ $('cameraBtn').onclick=()=>$('cameraInput').click();
+ $('galleryBtn').onclick=()=>$('galleryInput').click();
+ $('voiceBtn').onclick=()=>{
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR)return note('Voice typing is not supported in this browser. Use the keyboard microphone instead.');
+  const rec=new SR();rec.lang='my-MM';rec.interimResults=false;rec.onresult=e=>{$('message').value+=e.results[0][0].transcript;$('message').focus();};rec.onerror=()=>note('Could not capture voice. Please check microphone permission.');rec.start();
+ };
+ $('emojiBtn').onclick=()=>{$('emojiPicker').classList.toggle('hidden');$('attachMenu').classList.add('hidden');};
+ $('emojiPicker').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('message').value+=$(b).textContent;$('emojiPicker').classList.add('hidden');$('message').focus();});
+ $('attachMenu').querySelectorAll('[data-attach]').forEach(b=>b.onclick=()=>{$('attachMenu').classList.add('hidden');const target=b.dataset.attach==='camera'?'cameraInput':b.dataset.attach==='gallery'?'galleryInput':'fileInput';$(target).click();});
+ ['cameraInput','galleryInput','fileInput'].forEach(id=>$(id).onchange=()=>{if($(id).files?.length)note('Media attachment selection is ready. Photo/video sending still needs its secure upload workflow.');});
+ $('message').addEventListener('focus',()=>document.body.classList.add('keyboard-open'));
+ $('message').addEventListener('blur',()=>setTimeout(()=>{if(!document.activeElement||document.activeElement.id!=='message')document.body.classList.remove('keyboard-open');},150));
  $('message').addEventListener('input',sendTyping);
+ function syncVisualViewport(){const vv=window.visualViewport;if(!vv)return;document.documentElement.style.setProperty('--vvh',vv.height+'px');document.documentElement.style.setProperty('--vv-top',Math.max(72,vv.offsetTop)+'px');}
+ syncVisualViewport();if(window.visualViewport){visualViewport.addEventListener('resize',syncVisualViewport);visualViewport.addEventListener('scroll',syncVisualViewport);}
+
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&currentConversation)markConversationRead();});
  window.addEventListener('pagehide',()=>{if(channel)channel.untrack();});
  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
