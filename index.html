@@ -3,6 +3,11 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#081a33"><title>MK Messenger</title>
+<script>
+if(location.hostname==='mk-messenger-alpha.vercel.app'){
+ location.replace('https://mk-messenger-khant-min-htet2.vercel.app'+location.pathname+location.search+location.hash);
+}
+</script>
 <!-- source-control-check: 2026-11-14 -->
 <style>
 :root{--navy:#081a33;--navy2:#102b4d;--gold:#e5bd68;--bg:#f3f6fa;--ink:#172338;--muted:#738096;--line:#e4e9f0;--white:#fff}
@@ -23,6 +28,9 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 #messages{padding:18px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:9px;min-height:0;max-height:none}
 .bubble{max-width:78%;padding:10px 13px;border-radius:14px;background:#eef2f7;align-self:flex-start;white-space:pre-wrap;overflow-wrap:anywhere}.bubble.mine{background:var(--navy2);color:#fff;align-self:flex-end}.bubble .small{opacity:.7;margin-top:4px}
 .bubble .reply-quote{border-left:3px solid var(--gold);padding:5px 8px;margin-bottom:6px;background:#ffffff18;border-radius:5px;font-size:12px;opacity:.9}
+.bubble .media-image{display:block;max-width:min(100%,320px);max-height:360px;border-radius:12px;object-fit:contain;margin:4px 0}
+.bubble .media-video{display:block;width:min(100%,320px);max-height:360px;border-radius:12px;margin:4px 0;background:#000}
+.bubble .media-file{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:#ffffff20;color:inherit;text-decoration:underline;overflow-wrap:anywhere}
 .bubble .msg-tools{display:flex;justify-content:flex-end;gap:8px;margin-top:5px}.bubble .reply-btn{font-size:11px;background:transparent;color:inherit;padding:2px 4px}
 #typing{padding:0 16px 8px;color:var(--muted);font-size:12px;min-height:18px}
 #onlineStatus{font-size:11px;color:var(--muted);margin-left:8px}
@@ -194,7 +202,19 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  const mine=m.sender_id===user.id,el=document.createElement('div');el.className='bubble'+(mine?' mine':'');el.dataset.messageId=m.id;
  const quoted=m.reply_to_id?'<div class="reply-quote">'+esc(replyText||'Replied message')+'</div>':'';
  const status=mine?(receipt?.read_at?'Seen':receipt?.delivered_at?'Delivered':'Sent'):'';
- el.innerHTML=quoted+'<div>'+esc(m.body)+'</div><div class="small">'+time(m.created_at)+(mine?' · <span class="receipt">'+status+'</span>':'')+'</div><div class="msg-tools"><button class="reply-btn" type="button">Reply</button></div>';
+ el.innerHTML=quoted+'<div class="message-content"></div><div class="small">'+time(m.created_at)+(mine?' · <span class="receipt">'+status+'</span>':'')+'</div><div class="msg-tools"><button class="reply-btn" type="button">Reply</button></div>';
+ const content=el.querySelector('.message-content');
+ if(['image','video','file'].includes(m.message_type)){
+   content.textContent='Loading attachment…';
+   sb.storage.from('chat-media').createSignedUrl(m.body,3600).then(({data,error})=>{
+     content.innerHTML='';
+     if(error||!data?.signedUrl){content.textContent='Attachment unavailable';return;}
+     if(m.message_type==='image'){const img=document.createElement('img');img.className='media-image';img.src=data.signedUrl;img.alt='Shared image';img.loading='lazy';img.onclick=()=>window.open(data.signedUrl,'_blank','noopener');content.appendChild(img);}
+     else if(m.message_type==='video'){const video=document.createElement('video');video.className='media-video';video.src=data.signedUrl;video.controls=true;video.playsInline=true;content.appendChild(video);}
+     else {const link=document.createElement('a');link.className='media-file';link.href=data.signedUrl;link.target='_blank';link.rel='noopener';link.textContent='📎 '+(m.file_name||'Download file');content.appendChild(link);}
+   });
+ }else content.textContent=m.body;
+ $('messages').querySelector('.empty')?.remove();
  el.querySelector('.reply-btn').onclick=()=>setReply(m);$('messages').appendChild(el);$('messages').scrollTop=$('messages').scrollHeight;
 }
 function updateReceiptLabel(el,r){const s=el.querySelector('.receipt');if(s)s.textContent=r.read_at?'Seen':r.delivered_at?'Delivered':'Sent';}
@@ -213,11 +233,27 @@ async function sendTyping(){if(!channel||!currentConversation)return;const now=D
 
  async function loadMessages(){
  const {data,error}=await sb.from('messages').select('*').eq('conversation_id',currentConversation).is('deleted_at',null).order('created_at',{ascending:true}).limit(200);
- if(error)return note(error.message);$('messages').innerHTML='';const rows=data||[],ids=rows.map(m=>m.id);let receipts=[],replyRows=[];
+ if(error){note('Could not load messages: '+error.message);return;}
+ $('messages').innerHTML='';const rows=data||[],ids=rows.map(m=>m.id);let receipts=[],replyRows=[];
+ if(!rows.length){$('messages').innerHTML='<div class="empty">No messages yet. Say hello!</div>';return;}
  if(ids.length){const r=await sb.from('message_receipts').select('*').in('message_id',ids).neq('user_id',user.id);if(!r.error)receipts=r.data||[];}
  const replyIds=rows.map(m=>m.reply_to_id).filter(Boolean);if(replyIds.length){const rr=await sb.from('messages').select('id,body').in('id',replyIds);if(!rr.error)replyRows=rr.data||[];}
  const receiptMap=new Map(receipts.map(r=>[r.message_id,r])),replyMap=new Map(replyRows.map(r=>[r.id,r.body]));
  rows.forEach(m=>appendMessage(m,receiptMap.get(m.id)||null,replyMap.get(m.reply_to_id)||''));
+}
+ async function uploadAndSend(file){
+ if(!currentConversation)return note('Open a conversation before attaching a file.');
+ const allowed=new Set(['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','application/pdf','text/plain','application/zip']);
+ if(!allowed.has(file.type))return note('This file type is not supported.');
+ if(file.size>50*1024*1024)return note('File size must be 50 MB or smaller.');
+ const type=file.type.startsWith('image/')?'image':file.type.startsWith('video/')?'video':'file';
+ const safeName=(file.name||'attachment').replace(/[^a-zA-Z0-9._-]/g,'_').slice(-80);
+ const path=currentConversation+'/'+crypto.randomUUID()+'-'+safeName;
+ const {error:uploadError}=await sb.storage.from('chat-media').upload(path,file,{contentType:file.type,upsert:false});
+ if(uploadError)return note('Upload failed: '+uploadError.message);
+ const {data,error}=await sb.from('messages').insert({conversation_id:currentConversation,sender_id:user.id,body:path,message_type:type}).select().single();
+ if(error){await sb.storage.from('chat-media').remove([path]);return note('Message could not be saved: '+error.message);}
+ appendMessage(data);note('Attachment sent.');setTimeout(clearNote,2200);
 }
  async function sendMessage(e){
  e.preventDefault();const body=$('message').value.trim()||'👍';if(!currentConversation)return;
@@ -257,7 +293,7 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
  $('emojiBtn').onclick=()=>{$('emojiPicker').classList.toggle('hidden');$('attachMenu').classList.add('hidden');};
  $('emojiPicker').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('message').value+=$(b).textContent;$('emojiPicker').classList.add('hidden');$('message').focus();});
  $('attachMenu').querySelectorAll('[data-attach]').forEach(b=>b.onclick=()=>{$('attachMenu').classList.add('hidden');const target=b.dataset.attach==='camera'?'cameraInput':b.dataset.attach==='gallery'?'galleryInput':'fileInput';$(target).click();});
- ['cameraInput','galleryInput','fileInput'].forEach(id=>$(id).onchange=()=>{if($(id).files?.length)note('Media attachment selection is ready. Photo/video sending still needs its secure upload workflow.');});
+ ['cameraInput','galleryInput','fileInput'].forEach(id=>$(id).onchange=async()=>{const file=$(id).files?.[0];$(id).value='';if(file)await uploadAndSend(file);});
  $('message').addEventListener('focus',()=>document.body.classList.add('keyboard-open'));
  $('message').addEventListener('blur',()=>setTimeout(()=>{if(!document.activeElement||document.activeElement.id!=='message')document.body.classList.remove('keyboard-open');},150));
  $('message').addEventListener('input',sendTyping);
