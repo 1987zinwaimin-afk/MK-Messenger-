@@ -32,11 +32,18 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 .bubble .media-video{display:block;width:min(100%,320px);max-height:360px;border-radius:12px;margin:4px 0;background:#000}
 .bubble .media-file{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:#ffffff20;color:inherit;text-decoration:underline;overflow-wrap:anywhere}
 .bubble .msg-tools{display:flex;justify-content:flex-end;gap:5px;margin-top:5px;flex-wrap:wrap}.bubble .reply-btn,.bubble .action-btn{font-size:11px;background:transparent;color:inherit;padding:2px 4px}.bubble .action-btn{opacity:.82}
-.reaction-bar{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
-.reaction-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border:1px solid #dce3ed;border-radius:16px;background:#fff;color:#26364d;font-size:12px;min-width:32px;justify-content:center}
+.reaction-bar{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+.reaction-bar:empty{display:none}
+.reaction-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border:1px solid #dce3ed;border-radius:14px;background:#fff;color:#26364d;font-size:11px;min-width:27px;justify-content:center}
 .bubble.mine .reaction-chip{background:#17365b;color:#fff;border-color:#49617f}
 .reaction-chip.active{border-color:var(--gold);background:#fff0c9;color:#142b49;box-shadow:0 0 0 1px var(--gold)}
-.reaction-chip .reaction-count{font-size:11px;font-weight:700}
+.reaction-chip .reaction-count{font-size:10px;font-weight:700}
+.bubble .msg-tools{display:none}
+.reaction-picker{position:absolute;z-index:30;display:flex;align-items:center;gap:4px;padding:7px 8px;background:#fff;border:1px solid #dce3ed;border-radius:24px;box-shadow:0 5px 22px #0b1c3533;max-width:min(310px,calc(100vw - 28px))}
+.reaction-picker button{border:0;background:#f2f4f8;border-radius:50%;width:34px;height:34px;padding:0;font-size:20px;display:grid;place-items:center}
+.reaction-picker button:active{transform:scale(1.15)}
+.bubble.reaction-open .msg-tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+.bubble.reaction-open .msg-tools button{font-size:10px;padding:3px 6px}
 #typing{padding:0 16px 8px;color:var(--muted);font-size:12px;min-height:18px}
 #onlineStatus{font-size:11px;color:var(--muted);margin-left:8px}
 .reply-preview{display:none;padding:8px 12px;background:#f7f4ed;border-top:1px solid var(--line);font-size:12px;color:var(--navy)}
@@ -185,6 +192,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  async function searchPeople(){const q=$('search').value.trim();if(q.length<3)return note('Enter at least 3 characters.');const {data,error}=await sb.from('profiles').select('id,username,display_name,bio').ilike('username',`%${q}%`).neq('id',user.id).limit(20);if(error)return note(error.message);$('searchresults').innerHTML=(data||[]).length?data.map(p=>`<div class="person"><div class="avatar">${initials(p.username)}</div><div class="grow"><b>@${esc(p.username)}</b><div class="small muted">${esc(p.display_name||'')}</div></div><button data-friend="${p.id}">Add</button></div>`).join(''):'No users found.';$('searchresults').querySelectorAll('[data-friend]').forEach(b=>b.onclick=()=>sendRequest(b.dataset.friend));}
  async function sendRequest(id){const {error}=await sb.from('friend_requests').insert({sender_id:user.id,receiver_id:id});if(error)return note(error.message);note('Friend request sent.');}
  async function acceptRequest(id){const {error}=await sb.rpc('accept_friend_request',{p_request_id:id});if(error)return note(error.message);await loadRequests();await loadChats();note('Friend request accepted.');}
+ document.addEventListener('click',ev=>{if(!ev.target.closest('.bubble'))closeReactionPickers();},{passive:true});
  async function openChat(id,title){
  clearNote();currentConversation=id;document.body.classList.add('mobile-chat-open');$('menuPanel').classList.remove('open');replyTarget=null;showReplyPreview();$('chatname').textContent=title||'Conversation';$('onlineStatus').textContent='';$('typing').textContent='';$('message').disabled=false;$('likeBtn').disabled=false;
  if(channel){await sb.removeChannel(channel);channel=null;}
@@ -217,13 +225,37 @@ function renderReactionBar(messageId,reactions=[]){
  const el=document.querySelector('[data-message-id="'+messageId+'"]');if(!el)return;
  let bar=el.querySelector('.reaction-bar');if(!bar){bar=document.createElement('div');bar.className='reaction-bar';el.appendChild(bar);}
  bar.innerHTML='';
- for(const emoji of REACTION_EMOJIS){
-  const matches=reactions.filter(r=>r.emoji===emoji),mine=matches.some(r=>r.user_id===user.id);
+ const grouped=REACTION_EMOJIS.map(emoji=>({emoji,matches:reactions.filter(r=>r.emoji===emoji)})).filter(x=>x.matches.length);
+ for(const item of grouped){
+  const mine=item.matches.some(r=>r.user_id===user.id);
   const b=document.createElement('button');b.type='button';b.className='reaction-chip'+(mine?' active':'');
-  b.innerHTML=emoji+(matches.length?'<span class="reaction-count">'+matches.length+'</span>':'');
-  b.setAttribute('aria-label',emoji+' '+matches.length+' reactions');
-  b.onclick=()=>toggleReaction(messageId,emoji,mine);bar.appendChild(b);
+  b.innerHTML=item.emoji+'<span class="reaction-count">'+item.matches.length+'</span>';
+  b.setAttribute('aria-label',item.emoji+' '+item.matches.length+' reactions');
+  b.onclick=()=>toggleReaction(messageId,item.emoji,mine);bar.appendChild(b);
  }
+}
+function closeReactionPickers(except=null){
+ document.querySelectorAll('.bubble.reaction-open').forEach(el=>{if(el!==except){el.classList.remove('reaction-open');el.querySelector('.reaction-picker')?.remove();}});
+}
+function showReactionPicker(el,m){
+ closeReactionPickers(el);el.classList.add('reaction-open');
+ let picker=el.querySelector('.reaction-picker');if(!picker){picker=document.createElement('div');picker.className='reaction-picker';el.appendChild(picker);}
+ picker.innerHTML='';
+ REACTION_EMOJIS.forEach(emoji=>{const b=document.createElement('button');b.type='button';b.textContent=emoji;b.setAttribute('aria-label','React '+emoji);b.onclick=async ev=>{ev.stopPropagation();const {data}=await sb.from('message_reactions').select('id').eq('message_id',m.id).eq('user_id',user.id).eq('emoji',emoji).maybeSingle();await toggleReaction(m.id,emoji,!!data);closeReactionPickers();};picker.appendChild(b);});
+ const rect=el.getBoundingClientRect(),width=Math.min(310,window.innerWidth-28);
+ picker.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-width-8))+'px';
+ picker.style.top=Math.max(8,rect.top-52)+'px';
+ picker.style.position='fixed';
+ el.querySelector('.msg-tools').style.display='flex';
+}
+function attachLongPress(el,m){
+ let timer=null,startX=0,startY=0,fired=false;
+ const cancel=()=>{if(timer){clearTimeout(timer);timer=null;}};
+ el.addEventListener('touchstart',ev=>{if(ev.target.closest('button,a,input,video'))return;const t=ev.touches[0];startX=t.clientX;startY=t.clientY;fired=false;timer=setTimeout(()=>{fired=true;showReactionPicker(el,m);},480);},{passive:true});
+ el.addEventListener('touchmove',ev=>{const t=ev.touches[0];if(Math.abs(t.clientX-startX)>10||Math.abs(t.clientY-startY)>10)cancel();},{passive:true});
+ el.addEventListener('touchend',cancel,{passive:true});el.addEventListener('touchcancel',cancel,{passive:true});
+ el.addEventListener('contextmenu',ev=>{ev.preventDefault();showReactionPicker(el,m);});
+ el.addEventListener('click',ev=>{if(ev.target.closest('.reaction-picker'))return;});
 }
 async function loadReactions(messageId){
  const {data,error}=await sb.from('message_reactions').select('id,message_id,user_id,emoji').eq('message_id',messageId);
@@ -262,7 +294,7 @@ function appendMessage(m,receipt=null,replyText='',reactions=[]){
  el.querySelector('.replace-btn')?.addEventListener('click',()=>{replaceTarget=m;$('replaceInput').click();});
  el.querySelector('.delete-btn')?.addEventListener('click',()=>deleteForMe(m));
  el.querySelector('.delete-everyone-btn')?.addEventListener('click',()=>deleteForEveryone(m));
- $('messages').appendChild(el);renderReactionBar(m.id,reactions);$('messages').scrollTop=$('messages').scrollHeight;
+ $('messages').appendChild(el);renderReactionBar(m.id,reactions);attachLongPress(el,m);$('messages').scrollTop=$('messages').scrollHeight;
 }
 function updateReceiptLabel(el,r){const s=el.querySelector('.receipt');if(s)s.textContent=r.read_at?'Seen':r.delivered_at?'Delivered':'Sent';}
 function setReply(m){replyTarget=m;$('replytext').textContent='Replying to: '+String(m.body||'').slice(0,100);showReplyPreview();$('message').focus();}
