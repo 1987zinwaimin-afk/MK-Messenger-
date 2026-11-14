@@ -258,6 +258,92 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  .wall-privacy-label{font-size:9px}.wall-privacy-label select{min-width:0;min-height:40px;font-size:11px;padding:7px 8px}
  .wall-publish{min-height:44px;font-size:13px}.wall-empty{padding:23px 13px}
 }
+
+/* Facebook-inspired social feed: clean, familiar and content-first */
+.wall-panel{max-width:100%;padding:14px 16px 28px;background:#f0f2f5}
+.wall-shell{width:min(100%,680px);gap:12px}
+.wall-page-head{padding:1px 2px 2px}
+.wall-page-head .section-title{font-size:23px;font-weight:800;color:#1c1e21;letter-spacing:-.3px;margin:0 0 2px}
+.wall-page-head .small{font-size:13px;color:#65676b}
+.wall-card,.wall-post{background:#fff;border:1px solid #e4e6eb;border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,.07);padding:14px;gap:12px}
+.wall-profile-card{grid-template-columns:minmax(0,1fr) auto;align-items:center;padding:13px 15px;border-radius:10px;gap:12px}
+.wall-profile-row{gap:11px;min-width:0}
+.wall-avatar-wrap{width:52px;height:52px}
+.wall-avatar,.wall-avatar-fallback{width:52px;height:52px;border:1px solid #d9dce1}
+.wall-avatar-fallback{background:#e4e6eb;color:#26354b;font-size:18px;box-shadow:none}
+.wall-profile-identity{gap:1px}
+.wall-profile-identity>b{font-size:15px;color:#1c1e21;font-weight:750}
+.wall-profile-identity .small{font-size:12px;color:#65676b}
+.wall-profile-caption{font-size:10px;color:#8a8d91}
+.wall-stats{border:0;border-left:1px solid #e4e6eb;padding-left:12px;gap:0}
+.wall-stat{min-width:53px!important;padding:2px 6px}
+.wall-stat b{font-size:17px;color:#1c1e21}
+.wall-stat span{font-size:10px;color:#65676b}
+.wall-composer-card{padding:14px;border-radius:10px;gap:11px}
+.wall-composer-heading{justify-content:flex-start}
+.wall-composer-heading .wall-card-title{font-size:16px;color:#1c1e21}
+.wall-composer-heading .small{font-size:11px;color:#65676b}
+.wall-compose-mark{display:none}
+#wallPostText{height:92px;min-height:92px;max-height:180px;background:#f0f2f5;border:1px solid #f0f2f5;border-radius:9px;padding:12px 14px;color:#1c1e21;font-size:15px;box-shadow:none}
+#wallPostText::placeholder{color:#65676b}
+#wallPostText:focus{background:#fff;border-color:#c5c9d0;box-shadow:0 0 0 2px rgba(24,119,242,.1)}
+.wall-composer-tools{display:flex;align-items:center;justify-content:space-between;gap:9px;padding-top:10px;border-top:1px solid #e4e6eb}
+.wall-media-button{background:#fff!important;border:1px solid #e4e6eb!important;border-radius:8px;color:#1c1e21!important;min-height:38px;padding:8px 11px;font-size:12px}
+.wall-media-button:before{content:"";display:none}
+.wall-privacy-label{display:flex;align-items:center;gap:6px;font-size:11px;color:#65676b;font-weight:600}
+.wall-privacy-label select{min-width:126px;width:auto;min-height:36px;padding:6px 9px;border:1px solid #e4e6eb;border-radius:8px;background:#f7f8fa;font-size:11px;color:#1c1e21}
+.wall-publish{min-height:42px;border-radius:8px;background:#1877f2!important;color:#fff!important;box-shadow:none;font-size:14px;font-weight:700}
+.wall-publish:hover{filter:brightness(.97)}
+.wall-post-list{gap:10px}
+.wall-post{padding:14px;gap:11px;border-radius:10px}
+.wall-post-head{gap:9px;align-items:flex-start}
+.wall-post-avatar{width:40px;height:40px;border:1px solid #e4e6eb}
+.wall-post-meta b{font-size:14px;color:#1c1e21;font-weight:750}
+.wall-post-meta .small{font-size:11px;color:#65676b;line-height:1.5}
+.wall-post-menu{gap:3px;flex-wrap:wrap;justify-content:flex-end}
+.wall-post-menu button{background:#f0f2f5;color:#4b4f56;font-size:10px;padding:5px 7px;border-radius:6px}
+.wall-post-text{font-size:14px;line-height:1.55;color:#1c1e21}
+.wall-post-media{border-radius:7px;gap:2px}
+.wall-post-media img,.wall-post-media video{max-height:460px;background:#f0f2f5}
+.wall-post-counts{font-size:11px;color:#65676b;padding:2px 1px 8px;border-bottom:1px solid #e4e6eb}
+.wall-post-actions{border:0;padding:0;gap:4px}
+.wall-post-actions button{background:transparent;color:#65676b;font-size:12px;font-weight:700;border-radius:7px;padding:8px 4px}
+.wall-post-actions button:hover{background:#f0f2f5}
+.wall-post-actions button.liked{color:#1877f2}
+.wall-post-comments{gap:7px}
+.wall-comment{background:#f0f2f5;border-radius:14px;padding:8px 11px;font-size:12px;color:#1c1e21}
+.wall-comment b{color:#1c1e21}
+.wall-comment-form input{background:#f0f2f5;border:1px solid #f0f2f5;border-radius:18px;padding:9px 13px;font-size:12px}
+.wall-comment-form button{background:#1877f2;color:#fff;border-radius:18px;padding:7px 13px;font-size:11px}
+.wall-empty{background:#fff;border:1px solid #e4e6eb;border-radius:10px;padding:30px 16px;color:#65676b}
+.wall-empty b{color:#1c1e21}
+.wall-empty-icon{background:#e7f3ff;color:#1877f2}
+@media(max-width:760px){
+ .wall-panel{padding:9px 9px 22px;background:#f0f2f5}
+ .wall-shell{gap:9px}
+ .wall-page-head .section-title{font-size:21px}
+ .wall-profile-card{grid-template-columns:minmax(0,1fr) auto;padding:11px;gap:5px}
+ .wall-profile-row{gap:8px}
+ .wall-avatar-wrap,.wall-avatar,.wall-avatar-fallback{width:46px;height:46px}
+ .wall-avatar-fallback{font-size:16px}
+ .wall-profile-identity>b{font-size:13px}
+ .wall-profile-caption{font-size:9px}
+ .wall-stats{padding-left:6px}
+ .wall-stat{min-width:43px!important;padding:2px 3px}
+ .wall-stat b{font-size:16px}
+ .wall-stat span{font-size:9px}
+ .wall-card,.wall-post{padding:11px;border-radius:9px}
+ .wall-composer-card{gap:10px}
+ #wallPostText{height:82px;min-height:82px;font-size:14px}
+ .wall-composer-tools{display:flex;flex-wrap:wrap;align-items:center}
+ .wall-media-button{font-size:11px;padding:7px 9px;min-height:36px}
+ .wall-privacy-label{margin-left:auto;font-size:10px}
+ .wall-privacy-label select{min-width:112px;min-height:35px;font-size:10px}
+ .wall-publish{min-height:40px}
+ .wall-post-menu button{font-size:9px;padding:5px}
+ .wall-post-actions button{font-size:11px;padding:7px 2px}
+}
+
 </style>
 </head>
 <body>
@@ -374,8 +460,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <section id="wallPanel" class="panel hidden wall-panel">
  <div class="wall-shell">
   <div class="wall-page-head">
-   <div class="wall-heading-copy"><div class="section-title" id="wallHeading">My Wall</div><div class="small muted" id="wallSubheading">Share your moments with friends</div></div>
-   <span class="wall-public-pill"><span>🌐</span> Public by default</span>
+   <div class="wall-heading-copy"><div class="section-title" id="wallHeading">My Wall</div><div class="small muted" id="wallSubheading">Your posts and moments</div></div>
   </div>
   <div id="wallProfileCard" class="wall-card wall-profile-card">
    <div class="wall-profile-row">
