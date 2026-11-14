@@ -61,10 +61,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 .emoji-picker button{background:transparent;color:var(--navy);padding:5px;font-size:20px}
 .reply-preview{flex:none}
 @media(max-width:760px){
- body.mobile-chat-open header{height:72px;justify-content:flex-start;padding:0 12px}
- body.mobile-chat-open header .brand,
- body.mobile-chat-open header>.row:last-child{display:none!important}
- body.mobile-chat-open header .menu-toggle{width:48px;height:48px;min-width:48px;padding:0;display:grid;place-items:center}
+ body.mobile-chat-open header{display:none!important}
  body.mobile-chat-open #cameraBtn,
  body.mobile-chat-open #galleryBtn,
  body.mobile-chat-open #voiceBtn{display:none!important}
@@ -80,6 +77,10 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  .back-chat{display:inline-flex;flex:none}
  #messages{flex:1;min-height:0;overflow-y:auto;max-height:none}
  .chathead{position:relative;flex:none}
+ body.mobile-chat-open .chathead{min-height:68px;padding:12px 16px;gap:12px;background:#fff}
+ body.mobile-chat-open .chathead #chatname{font-size:16px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ body.mobile-chat-open .chathead #onlineStatus{font-size:12px;white-space:nowrap;margin-left:0}
+ body.mobile-chat-open .back-chat{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px}
  .composer{position:relative;bottom:auto;padding:8px 10px;padding-bottom:max(8px,env(safe-area-inset-bottom));gap:5px}
  .composer .tool-btn{width:27px;min-width:27px;font-size:19px}
  .message-pill{height:40px;padding-left:12px}
@@ -94,11 +95,11 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 .bubble .voice-message{display:flex;align-items:center;gap:8px;min-width:min(260px,62vw);max-width:100%}
 .bubble .voice-message audio{width:100%;height:38px;max-width:280px}
 .bubble .voice-duration{font-size:11px;opacity:.75;white-space:nowrap}
- #chatPanel{position:fixed;left:0;right:0;top:var(--vv-top,72px);height:calc(var(--vvh, 100dvh) - var(--vv-top,72px));z-index:5;border-radius:0;overflow:hidden}
+ #chatPanel{position:fixed;inset:var(--vv-top,0px) 0 auto 0;height:var(--vvh,100dvh);z-index:50;border-radius:0;overflow:hidden;border:0;box-shadow:none}
  #chatPanel .chathead{flex:none}
  #chatPanel #messages{flex:1;min-height:0;overflow-y:auto}
  #chatPanel .composer{flex:none}
- body.keyboard-open #chatPanel{height:calc(var(--vvh, 100dvh) - var(--vv-top,72px))}
+ body.keyboard-open #chatPanel{height:var(--vvh,100dvh)}
 
  .profile-editor{max-width:100%}
 }
@@ -510,7 +511,7 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
  $('message').addEventListener('focus',()=>document.body.classList.add('keyboard-open'));
  $('message').addEventListener('blur',()=>setTimeout(()=>{if(!document.activeElement||document.activeElement.id!=='message')document.body.classList.remove('keyboard-open');},150));
  $('message').addEventListener('input',sendTyping);
- function syncVisualViewport(){const vv=window.visualViewport;if(!vv)return;document.documentElement.style.setProperty('--vvh',vv.height+'px');document.documentElement.style.setProperty('--vv-top',Math.max(72,vv.offsetTop)+'px');}
+ function syncVisualViewport(){const vv=window.visualViewport;if(!vv)return;document.documentElement.style.setProperty('--vvh',vv.height+'px');document.documentElement.style.setProperty('--vv-top',Math.max(0,vv.offsetTop)+'px');}
  syncVisualViewport();if(window.visualViewport){visualViewport.addEventListener('resize',syncVisualViewport);visualViewport.addEventListener('scroll',syncVisualViewport);}
 
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&currentConversation)markConversationRead();});
