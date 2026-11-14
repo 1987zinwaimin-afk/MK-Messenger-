@@ -451,10 +451,10 @@ async function openGroupCreator(){
 
  async function refreshDirectSafety(){
   if(!currentPeerId||currentConversationKind!=='direct'){blockedByMe=false;blockedByPeer=false;return;}
-  const {data,error}=await sb.from('user_blocks').select('blocker_id,blocked_id').or('and(blocker_id.eq.'+user.id+',blocked_id.eq.'+currentPeerId+'),and(blocker_id.eq.'+currentPeerId+',blocked_id.eq.'+user.id+')');
+  const {data,error}=await sb.rpc('get_user_block_status',{p_user_id:currentPeerId});
   if(error){note('Could not load block settings: '+error.message);return;}
-  blockedByMe=(data||[]).some(x=>x.blocker_id===user.id&&x.blocked_id===currentPeerId);
-  blockedByPeer=(data||[]).some(x=>x.blocker_id===currentPeerId&&x.blocked_id===user.id);
+  blockedByMe=!!data?.[0]?.blocked_by_me;
+  blockedByPeer=!!data?.[0]?.blocked_me;
   $('blockUserBtn').textContent=blockedByMe?'Unblock':'Block';
   $('message').disabled=blockedByMe||blockedByPeer;
   $('likeBtn').disabled=blockedByMe||blockedByPeer;
