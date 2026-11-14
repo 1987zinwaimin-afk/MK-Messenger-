@@ -67,8 +67,11 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  body.mobile-chat-open #voiceBtn{display:none!important}
  header{height:72px;padding:0 12px}.menu-toggle{display:block}
  .brand{font-size:19px}.wrap{margin:0 auto;padding:0 10px}
- .tabs{display:none;position:absolute;z-index:20;left:12px;right:auto;top:78px;width:max-content;max-width:calc(100vw - 24px);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 30px #081a3330;padding:10px;flex-direction:column;align-items:flex-start;gap:6px}
- .tabs.open{display:flex}.tabs button{width:auto;max-width:100%;min-width:0;text-align:left;white-space:nowrap;padding:10px 14px}
+ .tabs{display:none;position:absolute;z-index:20;left:12px;right:auto;top:78px;width:min(220px,calc(100vw - 24px));background:#fff;border:1px solid #e6eaf0;border-radius:16px;box-shadow:0 10px 28px #081a3326;padding:9px;flex-direction:column;align-items:stretch;gap:5px}
+ .tabs.open{display:flex;animation:menuDrop .16s ease-out}
+ @keyframes menuDrop{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+ .tabs button{display:flex;align-items:center;justify-content:flex-start;width:100%;height:42px;min-height:42px;max-width:100%;min-width:0;text-align:left;white-space:nowrap;padding:0 13px;border-radius:10px;font-size:13px}
+ .tabs .menu-logout{margin-top:5px;border-top:1px solid #edf0f4;padding-top:7px;height:48px;min-height:48px;background:transparent;color:var(--navy);border-radius:0 0 9px 9px}
  .layout{display:flex;flex-direction:column;gap:8px;min-height:calc(100dvh - 86px)}
  .side{min-height:calc(100dvh - 100px);padding:14px}
  .main{display:none;height:calc(100dvh - 86px);min-height:0;width:100%;flex-direction:column;border-radius:0}
