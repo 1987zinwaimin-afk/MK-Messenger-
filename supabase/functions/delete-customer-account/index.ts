@@ -75,6 +75,7 @@ Deno.serve(async (req: Request) => {
         ? body.targetUserId.trim()
         : caller.id;
     const isSelf = targetUserId === caller.id;
+    const convertToOwner = body.convertToOwner === true;
 
     const admin = createClient(url, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -85,11 +86,25 @@ Deno.serve(async (req: Request) => {
       { p_user_id: caller.id },
     );
     if (ownerError) return json({ error: "Could not verify Owner permissions" }, 503);
-    if (!isSelf && isOwner !== true) {
-      return json({ error: "Owner permission required to delete another account" }, 403);
-    }
-    if (isSelf && isOwner === true) {
-      return json({ error: "Owner account cannot be deleted through Customer Account deletion" }, 403);
+
+    if (convertToOwner) {
+      if (!isSelf || (caller.email || "").toLowerCase() !== "1987zinwaimin@gmail.com") {
+        return json({ error: "Only the designated account can complete first Owner setup" }, 403);
+      }
+      const { data: canBootstrap, error: ownerCountError } = await admin.rpc(
+        "can_bootstrap_mk_owner",
+        { p_user_id: caller.id },
+      );
+      if (ownerCountError) return json({ error: "Could not verify initial Owner setup state" }, 503);
+      if (canBootstrap !== true) return json({ error: "Owner setup is unavailable or has already been completed" }, 409);
+      if (isOwner === true) return json({ error: "This account is already an Owner" }, 409);
+    } else {
+      if (!isSelf && isOwner !== true) {
+        return json({ error: "Owner permission required to delete another account" }, 403);
+      }
+      if (isSelf && isOwner === true) {
+        return json({ error: "Owner account cannot be deleted through Customer Account deletion" }, 403);
+      }
     }
 
     const { data: target, error: targetError } = await admin.auth.admin.getUserById(targetUserId);
@@ -149,6 +164,32 @@ Deno.serve(async (req: Request) => {
       return json({
         error: "Media cleanup completed, but database cleanup failed. The Auth account was retained; retry the deletion or contact the administrator.",
       }, 500);
+    }
+
+    if (convertToOwner) {
+      const username = typeof body.username === "string" && /^[a-zA-Z0-9_]{3,24}$/.test(body.username)
+        ? body.username
+        : "zinwaimin";
+      const displayName = typeof body.displayName === "string" && body.displayName.trim()
+        ? body.displayName.trim().slice(0, 80)
+        : "MK Owner";
+      const { error: ownerSetupError } = await admin.rpc("bootstrap_mk_owner", {
+        p_user_id: targetUserId,
+        p_username: username,
+        p_display_name: displayName,
+      });
+      if (ownerSetupError) {
+        console.error("First Owner setup failed after customer data purge:", ownerSetupError.message);
+        return json({
+          error: "Customer data cleanup completed, but Owner setup failed. The login account was retained; contact the administrator.",
+        }, 500);
+      }
+      return json({
+        ok: true,
+        convertedToOwner: true,
+        ownerEmail: "1987zinwaimin@gmail.com",
+        storageCleanupWarnings: [],
+      });
     }
 
     const { error: deleteError } = await admin.auth.admin.deleteUser(targetUserId);
