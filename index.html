@@ -718,15 +718,23 @@ async function disableBrowserNotifications(){
  finally{button.disabled=false;await syncPushButton();}
 }
 async function togglePushNotifications(){
- const registration=await navigator.serviceWorker.ready;
- const subscription=await registration.pushManager.getSubscription();
- if(subscription){
+ const button=$('enableNotifications');
+ if(button)button.disabled=true;
+ try{
+  const registration=await navigator.serviceWorker.ready;
+  const subscription=await registration.pushManager.getSubscription();
   const currentKey=vapidKeyBytes(cfg.vapidPublicKey);
-  const oldKey=subscription.options?.applicationServerKey;
-  const keyMatches=!!oldKey&&oldKey.byteLength===currentKey.byteLength&&oldKey.every((value,index)=>value===currentKey[index]);
-  if(keyMatches)return disableBrowserNotifications();
+  const oldKey=subscription?.options?.applicationServerKey;
+  const keyMatches=!!subscription&&!!oldKey&&oldKey.byteLength===currentKey.byteLength&&new Uint8Array(oldKey).every((value,index)=>value===currentKey[index]);
+  if(subscription&&keyMatches)return await disableBrowserNotifications();
+  return await enableBrowserNotifications();
+ }catch(e){
+  console.error('[MK Push] Toggle failed:',e);
+  note('Could not refresh notifications: '+(e.message||String(e)));
+ }finally{
+  if(button)button.disabled=false;
+  await syncPushButton();
  }
- return enableBrowserNotifications();
 }
 async function openGroupCreator(){
   $('groupTitle').value='';$('groupFriends').innerHTML='<div class="small muted">Loading friends…</div>';
