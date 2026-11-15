@@ -1133,7 +1133,7 @@ async function togglePinnedMessage(m){
  hiddenMessageIds=new Set((hidden.data||[]).map(x=>x.message_id));
  const visibleRows=dataForRender.filter(m=>!hiddenMessageIds.has(m.id));
  $('messages').innerHTML='';const rows=visibleRows,ids=rows.map(m=>m.id);let receipts=[],replyRows=[];
- if(!rows.length){$('messages').innerHTML='<div class="empty">No messages yet. Say hello!</div>';return;}
+ if(!rows.length){$('messages').innerHTML='<div class="empty">No messages yet. Say hello!</div>';const olderButton=$('loadOlderMessages');if(olderButton)olderButton.classList.add('hidden');return;}
  if(ids.length){const r=await sb.from('message_receipts').select('*').in('message_id',ids).neq('user_id',user.id);if(!r.error)receipts=r.data||[];}
  const replyIds=rows.map(m=>m.reply_to_id).filter(Boolean);if(replyIds.length){const rr=await sb.from('messages').select('id,body').in('id',replyIds);if(!rr.error)replyRows=rr.data||[];}
  const reactionResult=await sb.from('message_reactions').select('id,message_id,user_id,emoji').in('message_id',ids);
@@ -1141,6 +1141,7 @@ async function togglePinnedMessage(m){
  const reactionMap=new Map();for(const r of (reactionResult.data||[])){if(!reactionMap.has(r.message_id))reactionMap.set(r.message_id,[]);reactionMap.get(r.message_id).push(r);}
  const receiptMap=new Map(receipts.map(r=>[r.message_id,r])),replyMap=new Map(replyRows.map(r=>[r.id,r.body]));
  rows.forEach(m=>appendMessage(m,receiptMap.get(m.id)||null,replyMap.get(m.reply_to_id)||'',reactionMap.get(m.id)||[]));
+ const olderButton=$('loadOlderMessages');if(olderButton){olderButton.classList.toggle('hidden',!hasOlderMessages);olderButton.textContent=hasOlderMessages?'Load older messages':'No older messages';}
 }
  async function loadOlderMessages(){
  if(olderMessagesLoading||!hasOlderMessages||!currentConversation||!oldestMessageCursor)return;
