@@ -1120,12 +1120,11 @@ async function togglePinnedMessage(m){
  async function loadMessages(){
  const conversationId=currentConversation;
  oldestMessageCursor=null;hasOlderMessages=false;
- const {data,error}=await sb.from('messages').select('*').eq('conversation_id',conversationId).is('deleted_at',null).order('created_at',{ascending:false}).limit(100);
+ const {data,error}=await sb.from('messages').select('*').eq('conversation_id',conversationId).is('deleted_at',null) .order('created_at',{ascending:false}).order('id',{ascending:false}).limit(100);
  if(currentConversation!==conversationId)return;
  if(error){note('Could not load messages: '+error.message);return;}
- const page=(data||[]).reverse();hasOlderMessages=page.length===100;oldestMessageCursor=page[0]?.created_at||null;
+ const page=(data||[]).reverse();hasOlderMessages=page.length===100;oldestMessageCursor=page.length?{created_at:page[0].created_at,id:page[0].id}:null;
  const dataForRender=page;
- if(error){note('Could not load messages: '+error.message);return;}
  const messageIds=dataForRender.map(m=>m.id);let pinRows=[];if(messageIds.length){const pins=await sb.from('message_pins').select('message_id').eq('user_id',user.id).in('message_id',messageIds);if(pins.error){note('Could not load pinned messages: '+pins.error.message);return;}pinRows=pins.data||[];}
  pinnedMessageIds=new Set(pinRows.map(x=>x.message_id));
  const hidden=await sb.from('message_hidden_for').select('message_id').eq('user_id',user.id);
@@ -1148,7 +1147,7 @@ async function togglePinnedMessage(m){
  const conversationId=currentConversation,container=$('messages'),button=$('loadOlderMessages');olderMessagesLoading=true;if(button){button.disabled=true;button.textContent='Loading…';}
  const previousHeight=container.scrollHeight,previousTop=container.scrollTop;
  try{
-  const {data,error}=await sb.from('messages').select('*').eq('conversation_id',conversationId).is('deleted_at',null).lt('created_at',oldestMessageCursor).order('created_at',{ascending:false}).limit(100);
+  const cursor=oldestMessageCursor;const {data,error}=await sb.from('messages').select('*').eq('conversation_id',conversationId).is('deleted_at',null).or('created_at.lt.'+cursor.created_at+',and(created_at.eq.'+cursor.created_at+',id.lt.'+cursor.id+')').order('created_at',{ascending:false}).order('id',{ascending:false}).limit(100);
   if(error)throw error;if(currentConversation!==conversationId)return;
   const page=(data||[]).reverse();if(!page.length){hasOlderMessages=false;return;}
   const ids=page.map(m=>m.id);const [hidden,pins,receipts]=await Promise.all([sb.from('message_hidden_for').select('message_id').eq('user_id',user.id).in('message_id',ids),sb.from('message_pins').select('message_id').eq('user_id',user.id).in('message_id',ids),sb.from('message_receipts').select('*').in('message_id',ids).neq('user_id',user.id)]);
@@ -1156,7 +1155,7 @@ async function togglePinnedMessage(m){
   const hiddenIds=new Set((hidden.data||[]).map(x=>x.message_id));(pins.data||[]).forEach(x=>pinnedMessageIds.add(x.message_id));
   const replyIds=page.map(m=>m.reply_to_id).filter(Boolean);let replyMap=new Map();if(replyIds.length){const q=await sb.from('messages').select('id,body').in('id',replyIds);if(!q.error)replyMap=new Map((q.data||[]).map(x=>[x.id,x.body]));}
   const receiptMap=new Map((receipts.data||[]).map(x=>[x.message_id,x]));for(const m of page){if(!hiddenIds.has(m.id))appendMessage(m,receiptMap.get(m.id)||null,replyMap.get(m.reply_to_id)||'');}
-  oldestMessageCursor=page[0].created_at;hasOlderMessages=page.length===100;
+  oldestMessageCursor={created_at:page[0].created_at,id:page[0].id};hasOlderMessages=page.length===100;
   container.scrollTop=container.scrollHeight-previousHeight+previousTop;
  }catch(error){note('Could not load older messages: '+(error.message||String(error)));}
  finally{olderMessagesLoading=false;if(button){button.disabled=false;button.textContent=hasOlderMessages?'Load older messages':'No older messages';button.classList.toggle('hidden',!hasOlderMessages);}}
