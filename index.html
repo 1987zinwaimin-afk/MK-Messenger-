@@ -666,7 +666,7 @@ async function syncPushButton(){
   const subscription=await registration.pushManager.getSubscription();
   const currentKey=vapidKeyBytes(cfg.vapidPublicKey);
   const oldKey=subscription?.options?.applicationServerKey;
-  const keyMatches=!!subscription&&!!oldKey&&oldKey.byteLength===currentKey.byteLength&&oldKey.every((value,index)=>value===currentKey[index]);
+  const keyMatches=!!subscription&&!!oldKey&&oldKey.byteLength===currentKey.byteLength&&new Uint8Array(oldKey).every((value,index)=>value===currentKey[index]);
   button.textContent=subscription?(keyMatches?'🔔 Notifications enabled':'🔄 Refresh notifications'):'🔔 Enable notifications';
   const help=$('notificationHelp');if(help)help.textContent=subscription?(keyMatches?'Push notifications are enabled for this device.':'The push key changed. Tap Refresh notifications to renew this device registration.'):'Push notifications are currently disabled on this device.';
  }catch(_){button.textContent='🔔 Enable notifications';const help=$('notificationHelp');if(help)help.textContent='Unable to read notification status. Please try again.';}
