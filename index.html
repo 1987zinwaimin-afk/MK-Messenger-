@@ -219,7 +219,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  .profile-editor{max-width:100%}
 }
 .security-card{background:#fff;border:1px solid var(--line);border-radius:13px;padding:14px;margin:10px 0;display:grid;gap:9px}.security-card input{min-height:44px}.security-card button{justify-self:start}
-#notice{margin:12px 0;padding:10px 12px;border-radius:10px;background:#fff5dc;color:#694d12;display:none}
+#notice{position:fixed;z-index:1200;top:calc(14px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%) translateY(-8px);width:min( calc(100% - 28px), 520px);margin:0;padding:13px 16px;border-radius:13px;background:#eaf2ff;color:#17365d;border:1px solid #cbdcf4;box-shadow:0 12px 34px #081a3330;display:none;opacity:0;pointer-events:none;transition:opacity .22s ease,transform .22s ease;overflow-wrap:anywhere;font-weight:650}#notice.show{display:block;opacity:1;transform:translateX(-50%) translateY(0)}#notice.toast-success{background:#e8f7ed;color:#176438;border-color:#b8e4c7}#notice.toast-error{background:#fff0f0;color:#a12632;border-color:#f2c3c7}#notice.toast-warning{background:#fff5dc;color:#694d12;border-color:#f0dda8}#notice.toast-info{background:#eaf2ff;color:#17365d;border-color:#cbdcf4}
 .empty{margin:auto;text-align:center;padding:32px;color:var(--muted)}.hidden{display:none!important}
 @media(max-width:760px){header{padding:0 12px}.wrap{margin:0 auto}.layout{display:flex;flex-direction:column}.side{min-height:calc(100dvh - 100px)}.main{min-height:0;height:calc(100dvh - 86px)}#messages{max-height:none}.auth{margin:4vh 14px}}
 
@@ -522,8 +522,21 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  const $=id=>document.getElementById(id);
  const cfg=window.MK_CONFIG||{};
  let sb=null,user=null,currentConversation=null,currentConversationKind='direct',currentPeerId=null,blockedByMe=false,blockedByPeer=false,channel=null,inboxChannel=null,callSignalChannels=new Map(),profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0,hiddenMessageIds=new Set(),pinnedMessageIds=new Set(),chatPreferences=new Map(),showArchivedChats=false,replaceTarget=null,voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceStartedAt=0,voiceDuration=0,voiceTimer=null,voiceBlob=null,voiceCancelled=false,cropSourceImage=null,cropSourceUrl=null,cropSourceFile=null;
- function note(msg){$('notice').textContent=msg;$('notice').style.display='block';}
- function clearNote(){$('notice').style.display='none';}
+ let noticeTimer=null;
+ function note(msg,type){
+  const el=$('notice');if(!el)return;
+  const value=String(msg??'').trim();if(!value)return;
+  const inferred=type||(/could not|failed|error|duplicate|violates|not found|unable|cannot|invalid|already exists/i.test(value)?'error':/warning|please check|must be|limit|smaller|larger/i.test(value)?'warning':/success|sent|saved|updated|published|copied|added|deleted/i.test(value)?'success':'info');
+  clearTimeout(noticeTimer);
+  el.className='toast-'+inferred;el.textContent=value;el.style.display='block';
+  requestAnimationFrame(()=>el.classList.add('show'));
+  noticeTimer=setTimeout(clearNote,inferred==='error'?5000:3800);
+ }
+ function clearNote(){
+  const el=$('notice');if(!el)return;
+  clearTimeout(noticeTimer);noticeTimer=null;el.classList.remove('show');
+  setTimeout(()=>{if(!el.classList.contains('show'))el.style.display='none';},240);
+ }
  function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
  function initials(s){return (s||'?').trim().slice(0,1).toUpperCase();}
  function time(s){return new Date(s).toLocaleString();}
