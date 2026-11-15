@@ -683,7 +683,7 @@ async function enableBrowserNotifications(){
   let subscription=await registration.pushManager.getSubscription();
   const currentKey=vapidKeyBytes(cfg.vapidPublicKey);
   const oldKey=subscription?.options?.applicationServerKey;
-  const keyMatches=!!subscription&&!!oldKey&&oldKey.byteLength===currentKey.byteLength&&oldKey.every((value,index)=>value===currentKey[index]);
+  const keyMatches=!!subscription&&!!oldKey&&oldKey.byteLength===currentKey.byteLength&&new Uint8Array(oldKey).every((value,index)=>value===currentKey[index]);
   if(subscription&&!keyMatches){
    const oldEndpoint=subscription.endpoint;
    await sb.from('push_subscriptions').delete().eq('user_id',user.id).eq('endpoint',oldEndpoint);
