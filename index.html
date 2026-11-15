@@ -1146,17 +1146,18 @@ async function togglePinnedMessage(m){
  if(!$('messages').children.length)$('messages').innerHTML='<div class="empty">No messages yet. Say hello!</div>';
 }
  async function deleteForEveryone(m){
- if(m.sender_id!==user.id)return;
+ if(!m||m.sender_id!==user.id)return note('Only the sender can permanently delete this message.');
  if(!confirm('Permanently delete this message and its server record for everyone? This cannot be undone.'))return;
- if(['image','video','file','audio'].includes(m.message_type)&&m.body){
-   const {error:removeError}=await sb.storage.from('chat-media').remove([m.body]);
-   if(removeError)return note('Attachment could not be removed from storage. Message was not deleted: '+removeError.message);
- }
+ const attachmentPath=['image','video','file','audio'].includes(m.message_type)?m.body:null;
  const {error}=await sb.rpc('delete_message_permanently',{p_message_id:m.id});
  if(error)return note('Permanent delete failed: '+error.message);
  document.querySelector('[data-message-id="'+m.id+'"]')?.remove();
  if(!$('messages').children.length)$('messages').innerHTML='<div class="empty">No messages yet. Say hello!</div>';
- note('Message permanently deleted from the server.');
+ if(attachmentPath){
+  const {error:removeError}=await sb.storage.from('chat-media').remove([attachmentPath]);
+  if(removeError){console.warn('[MK Messenger] Deleted message but attachment cleanup failed:',removeError);return note('Message deleted for everyone. The attachment file could not be cleaned up automatically; please contact support.');}
+ }
+ note('Message permanently deleted from the server for everyone.');
 }
  async function replaceAttachment(file){
  const m=replaceTarget;replaceTarget=null;if(!m||!file)return;
