@@ -1286,9 +1286,13 @@ async function uploadAndSend(file){
  }catch(e){console.warn('[MK Push] Request failed:',e.message||e);}
 }
 async function notifyConversationPush(conversationId,type){
- const {data,error}=await sb.from('conversation_members').select('user_id').eq('conversation_id',conversationId).neq('user_id',user.id);
- if(error){console.warn('[MK Push] Could not find recipients:',error.message);return;}
- await Promise.all((data||[]).map(m=>sendBackgroundPush(m.user_id,conversationId,type)));
+ if(!user||!conversationId)return;
+ try{
+  const {data,error}=await sb.functions.invoke('mk-push',{body:{conversationId,type}});
+  if(error)console.warn('[MK Push] Delivery request failed:',error.message);
+  else if(data?.error)console.warn('[MK Push] Delivery not ready:',data.error);
+  else console.info('[MK Push] Message notification queued:',data?.sent??0);
+ }catch(e){console.warn('[MK Push] Request failed:',e.message||e);}
 }
 async function restorePendingCallInvitations(){
  if(!user||!sb||document.visibilityState==='hidden'||callPc||callPendingOffer)return;
