@@ -402,7 +402,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
 <div class="share-card"><b>My profile QR</b><div id="profileQr"></div><div class="row"><button id="copyProfileLink" class="secondary grow">Copy profile link</button><button id="shareProfileLink" class="gold grow">Share</button></div></div>
 </div></div>
 <div id="tab-security" class="hidden"><div class="section-title">Account security</div><div class="security-card"><b>Signed-in account</b><div id="securityEmail" class="small muted">Loading account…</div><div id="securitySession" class="small muted"></div><div id="securityDevice" class="small muted"></div></div><div class="security-card"><b>Change password</b><p class="small muted">Use at least 8 characters. Your current account and chat data will remain unchanged.</p><input id="newPassword" type="password" minlength="8" autocomplete="new-password" placeholder="New password (at least 8 characters)"><input id="confirmPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Confirm new password"><button id="changePasswordBtn" class="gold" type="button">Update password</button></div><div class="security-card"><b>Other signed-in devices</b><p class="small muted">Sign out other sessions while keeping this device signed in. Supabase may allow existing access tokens to remain valid until they expire.</p><button id="signOutOthersBtn" class="secondary" type="button">Sign out other devices</button></div></div>
-<div id="tab-settings" class="hidden"><div class="section-title">Settings</div><div class="security-card"><b>Notifications</b><p class="small muted">Manage push notifications for this device. You can enable or disable browser notifications here.</p><button id="enableNotifications" class="gold" type="button">🔔 Enable notifications</button><div id="notificationHelp" class="small muted" style="margin-top:9px">Notification permission and device subscription status will appear here.</div></div></div>
+<div id="tab-settings" class="hidden"><div class="section-title">Settings</div><div class="security-card"><b>Notifications</b><p class="small muted">Manage push notifications for this device. You can enable or disable browser notifications here.</p><button id="enableNotifications" class="gold" type="button">🔔 Enable notifications</button><button id="testPushBtn" class="secondary" type="button" style="margin:8px 0 0 8px">🧪 Send test notification</button><div id="notificationHelp" class="small muted" style="margin-top:9px">Notification permission and device subscription status will appear here.</div></div></div>
 </aside>
 <main class="panel main" id="chatPanel">
 <div class="chathead"><button id="backToChats" class="secondary back-chat" type="button" aria-label="Back to conversations">←</button><div class="chat-identity"><div id="chatAvatar" class="chat-avatar">M</div><div class="chat-identity-meta"><span id="chatname">Select a conversation</span><span id="onlineStatus"></span></div></div><div class="chathead-actions"><button id="voiceCallBtn" class="secondary call-action hidden" type="button" aria-label="Voice call" title="Voice call">📞</button><button id="videoCallBtn" class="secondary call-action hidden" type="button" aria-label="Video call" title="Video call">📹</button><button id="chatMoreBtn" class="secondary chat-more" type="button" aria-label="More chat options" aria-expanded="false">⋮</button><div id="chatMoreMenu" class="chat-more-menu hidden"><button id="blockUserBtn" class="secondary safety-btn hidden" type="button">Block user</button><button id="reportUserBtn" class="secondary safety-btn hidden" type="button">Report user</button><button id="groupInfoBtn" class="secondary hidden" type="button">Group settings</button></div></div></div>
@@ -716,6 +716,23 @@ async function disableBrowserNotifications(){
   button.textContent='🔔 Enable notifications';const help=$('notificationHelp');if(help)help.textContent='Push notifications are currently disabled on this device.';note('Push notifications disabled on this device.');
  }catch(e){note('Could not disable push notifications: '+(e.message||String(e)));}
  finally{button.disabled=false;await syncPushButton();}
+}
+async function sendTestPushNotification(){
+ const button=$('testPushBtn'),help=$('notificationHelp');
+ if(!user||!sb)return note('Sign in before testing notifications.');
+ if(Notification.permission!=='granted')return note('Enable notifications first and allow the browser permission.');
+ button.disabled=true;button.textContent='Sending test…';
+ try{
+  const {data,error}=await sb.functions.invoke('mk-push',{body:{type:'test'}});
+  if(error)throw error;
+  if(!data?.sent)throw new Error(data?.reason||data?.error||'No active device subscription received the test.');
+  if(help)help.textContent='Test push accepted by the push service. Check the Android notification panel.';
+  note('Test push sent to '+data.sent+' device(s).');
+ }catch(e){
+  console.error('[MK Push] Test failed:',e);
+  if(help)help.textContent='Test failed: '+(e.message||String(e));
+  note('Test notification failed: '+(e.message||String(e)));
+ }finally{button.disabled=false;button.textContent='🧪 Send test notification';}
 }
 async function togglePushNotifications(){
  const button=$('enableNotifications');
@@ -1564,6 +1581,7 @@ function setTab(tab){if(currentConversation)closeChat();document.body.classList.
  $('wallMediaInput').onchange=e=>{const added=Array.from(e.target.files||[]);if(wallSelectedFiles.length+added.length>6){note('You can add up to 6 photos or videos per post.');e.target.value='';return;}wallSelectedFiles.push(...added);wallRenderPreview();e.target.value='';};
  $('wallPublishBtn').onclick=publishWallPost;
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')restorePendingCallInvitations();});window.addEventListener('focus',restorePendingCallInvitations);$('enableNotifications').onclick=togglePushNotifications;
+ $('testPushBtn').onclick=sendTestPushNotification;
  $('toggleArchivedBtn').onclick=()=>{showArchivedChats=!showArchivedChats;loadChats();};
  $('chatSearch').addEventListener('input',()=>{loadChats();if(!$('chatSearch').value.trim())$('messageSearchResults').innerHTML='';});
  $('chatSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchMessages();}});
