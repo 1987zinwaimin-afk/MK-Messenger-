@@ -1327,10 +1327,12 @@ async function uploadAndSend(file){
   else if(data?.error)console.warn('[MK Push] Delivery not ready:',data.error);
  }catch(e){console.warn('[MK Push] Request failed:',e.message||e);}
 }
-async function notifyConversationPush(conversationId,type){
+async function notifyConversationPush(conversationId,type,preview=''){
  if(!user||!conversationId)return;
  try{
-  const {data,error}=await sb.functions.invoke('mk-push',{body:{conversationId,type}});
+  const senderName=String($('profileName')?.textContent||user.user_metadata?.display_name||user.user_metadata?.full_name||user.email?.split('@')[0]||'MK Messenger').trim().slice(0,60);
+  const safePreview=String(preview||'').replace(/\\s+/g,' ').trim().slice(0,180);
+  const {data,error}=await sb.functions.invoke('mk-push',{body:{conversationId,type,senderName,preview:safePreview}});
   if(error)console.warn('[MK Push] Delivery request failed:',error.message);
   else if(data?.error)console.warn('[MK Push] Delivery not ready:',data.error);
   else console.info('[MK Push] Message notification queued:',data?.sent??0);
@@ -1351,7 +1353,7 @@ async function sendMessage(e){
  e.preventDefault();const body=$('message').value.trim()||'👍';if(!currentConversation)return;
  const payload={conversation_id:currentConversation,sender_id:user.id,body,message_type:'text',...(replyTarget?{reply_to_id:replyTarget.id}:{})};
  const {data,error}=await sb.from('messages').insert(payload).select().single();if(error)return note(error.message);
- appendMessage(data,null,replyTarget?.body||'');void notifyConversationPush(currentConversation,'message');$('message').value='';replyTarget=null;showReplyPreview();
+ appendMessage(data,null,replyTarget?.body||'');void notifyConversationPush(currentConversation,'message',body);$('message').value='';replyTarget=null;showReplyPreview();
 }
  function renderAvatar(url){$('avatarPreview').classList.toggle('hidden',!url);$('avatarFallback').classList.toggle('hidden',!!url);if(url)$('avatarPreview').src=url;}
 let qrScanStream=null,qrScanFrame=0,qrScanDetector=null,qrScanBusy=false,qrScanCanvas=null,qrScanContext=null,qrScanLastAttempt=0;
