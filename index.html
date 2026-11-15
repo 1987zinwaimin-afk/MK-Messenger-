@@ -1063,8 +1063,14 @@ async function recordReceipt(messageId,read=false){
  if(updateError)console.warn('receipt update',updateError.message);
 }
 async function markConversationRead(){
- if(!currentConversation)return;const {data,error}=await sb.from('messages').select('id').eq('conversation_id',currentConversation).neq('sender_id',user.id).is('deleted_at',null).limit(200);
- if(error)return;for(const m of (data||[]))await recordReceipt(m.id,true);
+ if(!currentConversation||!user)return;
+ const conversationId=currentConversation;
+ const {data,error}=await sb.from('messages').select('id').eq('conversation_id',conversationId).neq('sender_id',user.id).is('deleted_at',null).order('created_at',{ascending:false}).limit(200);
+ if(error){console.warn('Could not load unread messages for read receipts:',error.message);return;}
+ if(currentConversation!==conversationId)return;
+ const results=await Promise.all((data||[]).map(m=>recordReceipt(m.id,true)));
+ const failed=results.find(x=>x&&x.error);
+ if(failed)console.warn('Some read receipts could not be saved:',failed.error.message);
 }
 async function sendTyping(){if(!channel||!currentConversation)return;const now=Date.now();if(now-lastTypingSent<900)return;lastTypingSent=now;await channel.send({type:'broadcast',event:'typing',payload:{user_id:user.id,username:profile?.username||'User'}});}
 
