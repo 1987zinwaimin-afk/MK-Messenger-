@@ -815,7 +815,28 @@ async function openGroupCreator(){
  }
  async function loadRequests(){const {data,error}=await sb.from('friend_requests').select('id,sender_id,receiver_id,status,profiles!friend_requests_sender_id_fkey(username,display_name)').eq('receiver_id',user.id).eq('status','pending');if(error){$('requestslist').textContent=error.message;return;}$('requestslist').innerHTML=(data||[]).length?data.map(r=>`<div class="person"><div class="avatar">${initials(r.profiles?.username)}</div><div class="grow"><b>@${esc(r.profiles?.username||'user')}</b></div><button data-accept="${r.id}">Accept</button></div>`).join(''):'No pending requests.';$('requestslist').querySelectorAll('[data-accept]').forEach(b=>b.onclick=()=>acceptRequest(b.dataset.accept));}
  async function searchPeople(){const q=$('search').value.trim();if(q.length<3)return note('Enter at least 3 characters.');const {data,error}=await sb.from('profiles').select('id,username,display_name,bio').ilike('username',`%${q}%`).neq('id',user.id).limit(20);if(error)return note(error.message);$('searchresults').innerHTML=(data||[]).length?data.map(p=>`<div class="person"><div class="avatar">${initials(p.username)}</div><div class="grow"><b>@${esc(p.username)}</b><div class="small muted">${esc(p.display_name||'')}</div></div><button data-friend="${p.id}">Add</button></div>`).join(''):'No users found.';$('searchresults').querySelectorAll('[data-friend]').forEach(b=>b.onclick=()=>sendRequest(b.dataset.friend));}
- async function sendRequest(id){const {error}=await sb.from('friend_requests').insert({sender_id:user.id,receiver_id:id});if(error)return note(error.message);note('Friend request sent.');}
+ async function sendRequest(id){
+  if(!id||id===user.id)return note('You cannot add your own account.');
+  const button=document.querySelector('[data-friend="'+CSS.escape(id)+'"]');if(button)button.disabled=true;
+  try{
+   const [outgoing,incoming]=await Promise.all([
+    sb.from('friend_requests').select('id,status').eq('sender_id',user.id).eq('receiver_id',id).maybeSingle(),
+    sb.from('friend_requests').select('id,status').eq('sender_id',id).eq('receiver_id',user.id).maybeSingle()
+   ]);
+   if(outgoing.error)throw outgoing.error;if(incoming.error)throw incoming.error;
+   const own=outgoing.data,other=incoming.data;
+   if(own?.status==='accepted'||other?.status==='accepted')return note('You are already friends with this person.','info');
+   if(own?.status==='pending')return note('Friend request already sent. Please wait for their response.','info');
+   if(other?.status==='pending')return note('This person has already sent you a request. Open Requests to accept it.','info');
+   const {error}=await sb.from('friend_requests').insert({sender_id:user.id,receiver_id:id});
+   if(error){
+    if(error.code==='23505')return note('A friend request between these accounts already exists. Check Requests or your friend list.','warning');
+    throw error;
+   }
+   note('Friend request sent.','success');
+  }catch(error){note('Could not send friend request: '+(error.message||String(error)),'error');}
+  finally{if(button)button.disabled=false;}
+ }
  async function acceptRequest(id){const {error}=await sb.rpc('accept_friend_request',{p_request_id:id});if(error)return note(error.message);await loadRequests();await loadChats();note('Friend request accepted.');}
 
  async function refreshDirectSafety(){
