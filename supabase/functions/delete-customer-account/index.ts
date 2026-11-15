@@ -110,6 +110,16 @@ Deno.serve(async (req: Request) => {
     const { data: target, error: targetError } = await admin.auth.admin.getUserById(targetUserId);
     if (targetError || !target.user) return json({ error: "Customer account does not exist" }, 404);
 
+    // Never allow an active Owner account to be deleted, even by another Owner.
+    if (!convertToOwner) {
+      const { data: targetIsOwner, error: targetOwnerError } = await admin.rpc(
+        "is_mk_owner_for_user",
+        { p_user_id: targetUserId },
+      );
+      if (targetOwnerError) return json({ error: "Could not verify target account permissions" }, 503);
+      if (targetIsOwner === true) return json({ error: "Owner accounts are protected and cannot be deleted." }, 403);
+    }
+
     // Preflight every referenced object before deleting relational metadata.
     const { data: paths, error: pathsError } = await admin.rpc(
       "get_mk_customer_storage_paths",
