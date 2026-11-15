@@ -522,7 +522,7 @@ select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;b
  const $=id=>document.getElementById(id);
  const cfg=window.MK_CONFIG||{};
  let sb=null,user=null,currentConversation=null,currentConversationKind='direct',currentPeerId=null,blockedByMe=false,blockedByPeer=false,channel=null,inboxChannel=null,callSignalChannels=new Map(),profile=null,replyTarget=null,remoteTypingTimer=null,lastTypingSent=0,hiddenMessageIds=new Set(),pinnedMessageIds=new Set(),chatPreferences=new Map(),showArchivedChats=false,replaceTarget=null,voiceRecorder=null,voiceStream=null,voiceChunks=[],voiceStartedAt=0,voiceDuration=0,voiceTimer=null,voiceBlob=null,voiceCancelled=false,cropSourceImage=null,cropSourceUrl=null,cropSourceFile=null;
- let noticeTimer=null;
+ let noticeTimer=null,oldestMessageCursor=null,olderMessagesLoading=false,hasOlderMessages=false;
  function parseCallLog(body){if(typeof body!=='string'||!body.startsWith('[[MK_CALL_LOG]]'))return null;try{return JSON.parse(body.slice(15));}catch{return null;}}
  async function writeCallLog(status){
   if(callLogWritten||callInitiatorId!==user.id||!callConversationId||!callRemoteUser)return;
@@ -930,7 +930,7 @@ async function openGroupCreator(){
   $('message').disabled=false;$('likeBtn').disabled=false;$('attachBtn').disabled=false;$('cameraBtn').disabled=false;$('galleryBtn').disabled=false;$('voiceBtn').disabled=false;$('onlineStatus').textContent='';
  }
  if(currentConversationKind==='group'&&conversationResult.data?.title){$('chatname').textContent=conversationResult.data.title;}
- document.body.classList.add('mobile-chat-open');$('menuPanel').classList.remove('open');replyTarget=null;showReplyPreview();$('chatname').textContent=title||'Conversation';$('onlineStatus').textContent='';$('typing').textContent='';$('message').disabled=false;$('likeBtn').disabled=false;
+ document.body.classList.add('mobile-chat-open');$('menuPanel').classList.remove('open');if(!$('loadOlderMessages')){const older=document.createElement('button');older.id='loadOlderMessages';older.type='button';older.className='secondary';older.textContent='Load older messages';older.style.cssText='display:block;margin:8px auto;padding:7px 12px;font-size:12px';older.onclick=loadOlderMessages;$('messages').parentNode.insertBefore(older,$('messages'));}replyTarget=null;showReplyPreview();$('chatname').textContent=title||'Conversation';$('onlineStatus').textContent='';$('typing').textContent='';$('message').disabled=false;$('likeBtn').disabled=false;
  if(channel){await sb.removeChannel(channel);channel=null;}
  await loadMessages();
  channel=sb.channel('conversation-'+id,{config:{presence:{key:user.id}}})
@@ -1118,14 +1118,20 @@ async function togglePinnedMessage(m){
  note(exists?'Message unpinned.':'Message pinned for you.');
  }
  async function loadMessages(){
- const {data,error}=await sb.from('messages').select('*').eq('conversation_id',currentConversation).is('deleted_at',null).order('created_at',{ascending:true}).limit(200);
+ const conversationId=currentConversation;
+ oldestMessageCursor=null;hasOlderMessages=false;
+ const {data,error}=await sb.from('messages').select('*').eq('conversation_id',conversationId).is('deleted_at',null).order('created_at',{ascending:false}).limit(100);
+ if(currentConversation!==conversationId)return;
  if(error){note('Could not load messages: '+error.message);return;}
- const messageIds=(data||[]).map(m=>m.id);let pinRows=[];if(messageIds.length){const pins=await sb.from('message_pins').select('message_id').eq('user_id',user.id).in('message_id',messageIds);if(pins.error){note('Could not load pinned messages: '+pins.error.message);return;}pinRows=pins.data||[];}
+ const page=(data||[]).reverse();hasOlderMessages=page.length===100;oldestMessageCursor=page[0]?.created_at||null;
+ const dataForRender=page;
+ if(error){note('Could not load messages: '+error.message);return;}
+ const messageIds=dataForRender.map(m=>m.id);let pinRows=[];if(messageIds.length){const pins=await sb.from('message_pins').select('message_id').eq('user_id',user.id).in('message_id',messageIds);if(pins.error){note('Could not load pinned messages: '+pins.error.message);return;}pinRows=pins.data||[];}
  pinnedMessageIds=new Set(pinRows.map(x=>x.message_id));
  const hidden=await sb.from('message_hidden_for').select('message_id').eq('user_id',user.id);
  if(hidden.error){note('Could not load hidden messages: '+hidden.error.message);return;}
  hiddenMessageIds=new Set((hidden.data||[]).map(x=>x.message_id));
- const visibleRows=(data||[]).filter(m=>!hiddenMessageIds.has(m.id));
+ const visibleRows=dataForRender.filter(m=>!hiddenMessageIds.has(m.id));
  $('messages').innerHTML='';const rows=visibleRows,ids=rows.map(m=>m.id);let receipts=[],replyRows=[];
  if(!rows.length){$('messages').innerHTML='<div class="empty">No messages yet. Say hello!</div>';return;}
  if(ids.length){const r=await sb.from('message_receipts').select('*').in('message_id',ids).neq('user_id',user.id);if(!r.error)receipts=r.data||[];}
@@ -1135,6 +1141,24 @@ async function togglePinnedMessage(m){
  const reactionMap=new Map();for(const r of (reactionResult.data||[])){if(!reactionMap.has(r.message_id))reactionMap.set(r.message_id,[]);reactionMap.get(r.message_id).push(r);}
  const receiptMap=new Map(receipts.map(r=>[r.message_id,r])),replyMap=new Map(replyRows.map(r=>[r.id,r.body]));
  rows.forEach(m=>appendMessage(m,receiptMap.get(m.id)||null,replyMap.get(m.reply_to_id)||'',reactionMap.get(m.id)||[]));
+}
+ async function loadOlderMessages(){
+ if(olderMessagesLoading||!hasOlderMessages||!currentConversation||!oldestMessageCursor)return;
+ const conversationId=currentConversation,container=$('messages'),button=$('loadOlderMessages');olderMessagesLoading=true;if(button){button.disabled=true;button.textContent='Loading…';}
+ const previousHeight=container.scrollHeight,previousTop=container.scrollTop;
+ try{
+  const {data,error}=await sb.from('messages').select('*').eq('conversation_id',conversationId).is('deleted_at',null).lt('created_at',oldestMessageCursor).order('created_at',{ascending:false}).limit(100);
+  if(error)throw error;if(currentConversation!==conversationId)return;
+  const page=(data||[]).reverse();if(!page.length){hasOlderMessages=false;return;}
+  const ids=page.map(m=>m.id);const [hidden,pins,receipts]=await Promise.all([sb.from('message_hidden_for').select('message_id').eq('user_id',user.id).in('message_id',ids),sb.from('message_pins').select('message_id').eq('user_id',user.id).in('message_id',ids),sb.from('message_receipts').select('*').in('message_id',ids).neq('user_id',user.id)]);
+  if(hidden.error||pins.error||receipts.error)throw hidden.error||pins.error||receipts.error;
+  const hiddenIds=new Set((hidden.data||[]).map(x=>x.message_id));(pins.data||[]).forEach(x=>pinnedMessageIds.add(x.message_id));
+  const replyIds=page.map(m=>m.reply_to_id).filter(Boolean);let replyMap=new Map();if(replyIds.length){const q=await sb.from('messages').select('id,body').in('id',replyIds);if(!q.error)replyMap=new Map((q.data||[]).map(x=>[x.id,x.body]));}
+  const receiptMap=new Map((receipts.data||[]).map(x=>[x.message_id,x]));for(const m of page){if(!hiddenIds.has(m.id))appendMessage(m,receiptMap.get(m.id)||null,replyMap.get(m.reply_to_id)||'');}
+  oldestMessageCursor=page[0].created_at;hasOlderMessages=page.length===100;
+  container.scrollTop=container.scrollHeight-previousHeight+previousTop;
+ }catch(error){note('Could not load older messages: '+(error.message||String(error)));}
+ finally{olderMessagesLoading=false;if(button){button.disabled=false;button.textContent=hasOlderMessages?'Load older messages':'No older messages';button.classList.toggle('hidden',!hasOlderMessages);}}
 }
  async function editMessage(m){
  if(m.message_type!=='text')return note('To change a photo or video, use Replace.');
