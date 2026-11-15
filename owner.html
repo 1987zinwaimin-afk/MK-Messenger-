@@ -49,7 +49,7 @@ function date(s){return s?new Date(s).toLocaleString():'—';}
 async function loadCustomers(){
  $('customers').innerHTML='<div class="empty">Loading customers…</div>';
  try{
-  const {data,error}=await sb.from('profiles').select('id,username,display_name,avatar_url,created_at').order('created_at',{ascending:false}).limit(500);
+  const {data,error}=await sb.rpc('list_mk_customer_profiles');
   if(error)throw error;
   allCustomerProfiles=data||[];
   if(!data?.length){$('customers').innerHTML='<div class="empty">No customer accounts found.</div>';return;}
