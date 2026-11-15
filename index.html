@@ -664,8 +664,11 @@ async function syncPushButton(){
  try{
   const registration=await navigator.serviceWorker.ready;
   const subscription=await registration.pushManager.getSubscription();
-  button.textContent=subscription?'🔔 Notifications enabled':'🔔 Enable notifications';
-  const help=$('notificationHelp');if(help)help.textContent=subscription?'Push notifications are enabled for this device.':'Push notifications are currently disabled on this device.';
+  const currentKey=vapidKeyBytes(cfg.vapidPublicKey);
+  const oldKey=subscription?.options?.applicationServerKey;
+  const keyMatches=!!subscription&&!!oldKey&&oldKey.byteLength===currentKey.byteLength&&oldKey.every((value,index)=>value===currentKey[index]);
+  button.textContent=subscription?(keyMatches?'🔔 Notifications enabled':'🔄 Refresh notifications'):'🔔 Enable notifications';
+  const help=$('notificationHelp');if(help)help.textContent=subscription?(keyMatches?'Push notifications are enabled for this device.':'The push key changed. Tap Refresh notifications to renew this device registration.'):'Push notifications are currently disabled on this device.';
  }catch(_){button.textContent='🔔 Enable notifications';const help=$('notificationHelp');if(help)help.textContent='Unable to read notification status. Please try again.';}
 }
 async function enableBrowserNotifications(){
@@ -678,7 +681,16 @@ async function enableBrowserNotifications(){
   if(permission!=='granted')return note('Notification permission was not granted. You can enable it in browser settings.');
   const registration=await navigator.serviceWorker.ready;
   let subscription=await registration.pushManager.getSubscription();
-  if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidKeyBytes(cfg.vapidPublicKey)});
+  const currentKey=vapidKeyBytes(cfg.vapidPublicKey);
+  const oldKey=subscription?.options?.applicationServerKey;
+  const keyMatches=!!subscription&&!!oldKey&&oldKey.byteLength===currentKey.byteLength&&oldKey.every((value,index)=>value===currentKey[index]);
+  if(subscription&&!keyMatches){
+   const oldEndpoint=subscription.endpoint;
+   await sb.from('push_subscriptions').delete().eq('user_id',user.id).eq('endpoint',oldEndpoint);
+   await subscription.unsubscribe();
+   subscription=null;
+  }
+  if(!subscription)subscription=await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:currentKey});
   const json=subscription.toJSON();
   if(!json.endpoint||!json.keys?.p256dh||!json.keys?.auth)throw new Error('The browser returned an incomplete push subscription.');
   const {error}=await sb.from('push_subscriptions').upsert({
@@ -708,7 +720,12 @@ async function disableBrowserNotifications(){
 async function togglePushNotifications(){
  const registration=await navigator.serviceWorker.ready;
  const subscription=await registration.pushManager.getSubscription();
- if(subscription)return disableBrowserNotifications();
+ if(subscription){
+  const currentKey=vapidKeyBytes(cfg.vapidPublicKey);
+  const oldKey=subscription.options?.applicationServerKey;
+  const keyMatches=!!oldKey&&oldKey.byteLength===currentKey.byteLength&&oldKey.every((value,index)=>value===currentKey[index]);
+  if(keyMatches)return disableBrowserNotifications();
+ }
  return enableBrowserNotifications();
 }
 async function openGroupCreator(){
