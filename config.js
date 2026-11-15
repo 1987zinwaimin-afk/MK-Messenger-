@@ -5,5 +5,5 @@ window.MK_CONFIG = {
   supabaseUrl: "https://lpjmsncnyeyliskwvrgj.supabase.co",
   supabaseAnonKey: "sb_publishable_31NKlPChayKiE5mb6dDEjg_J_i4dceg",
   // Public VAPID key only; set after generating a matching private key for the server.
-  vapidPublicKey: "BJ0CKIoMhU-Qud-cHZ2dpAUl6iu8HfkjvS2vY07mrJFZ1L4RZE6Rc6633rEOr6n7Kalfnis9kV8bbTh1oTQErjs"
+  vapidPublicKey: "BLQZwm8gLs0nsNdHdmrJGtpUCtoIkDj1etQidQtmmDYHlDNaElVjspQRH5A6AoFiV8lY4lJOgtLwuUcpBViAXEk"
 };
