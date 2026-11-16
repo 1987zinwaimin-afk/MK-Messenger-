@@ -1,0 +1,27 @@
+{
+  "name": "MK Messenger",
+  "short_name": "MK Messenger",
+  "description": "Private messaging with MK Messenger",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f6fa",
+  "theme_color": "#081a33",
+  "icons": [
+    {
+      "src": "/icons/mk-messenger-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/mk-messenger-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "prefer_related_applications": false,
+  "id": "/"
+}

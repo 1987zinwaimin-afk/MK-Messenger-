@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#08b7f5"/><stop offset=".48" stop-color="#0758e8"/><stop offset="1" stop-color="#061b9d"/></linearGradient>
+ <linearGradient id="bubble" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#edf4ff"/></linearGradient>
+ <linearGradient id="swoosh" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#00e5ff"/><stop offset="1" stop-color="#0788ff"/></linearGradient>
+ <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter>
+</defs>
+<rect width="512" height="512" rx="112" fill="url(#bg)"/>
+<rect x="7" y="7" width="498" height="498" rx="106" fill="none" stroke="#0034a8" stroke-opacity=".35" stroke-width="5"/>
+<path d="M82 266c0-104 81-178 184-178h52c73 0 128 36 153 91-27-31-68-48-119-48h-74c-82 0-142 54-142 130 0 45 20 83 56 108l-25 53-54 40 18-81C99 352 82 313 82 266Z" fill="#071e87" opacity=".18" filter="url(#shadow)"/>
+<path d="M92 253c0-96 75-165 173-165h54c75 0 130 40 151 99-27-32-67-50-118-50h-78c-79 0-136 50-136 122 0 43 19 79 54 104l-26 54-49 35 17-76c-28-29-42-70-42-123Z" fill="url(#bubble)"/>
+<path d="M105 349c41 52 108 73 184 57 66-14 117-58 137-117-12 76-69 134-151 151-80 17-158-9-203-65-18-22-28-48-31-75 13 20 34 38 64 49Z" fill="url(#swoosh)"/>
+<path d="M385 151c39 17 63 48 70 88-18-28-42-47-73-56Z" fill="#16c8ff" opacity=".95"/>
+<text x="255" y="300" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="151" font-weight="900" letter-spacing="-13" fill="#0639a9">MK</text>
+</svg>

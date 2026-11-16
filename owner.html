@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#081a33"><title>MK Messenger · Owner</title>
+<style>
+:root{--navy:#081a33;--navy2:#102b4d;--gold:#e5bd68;--bg:#f3f6fa;--ink:#172338;--muted:#738096;--line:#e4e9f0;--white:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Inter,system-ui,Arial,sans-serif}header{height:66px;background:var(--navy);color:white;border-bottom:2px solid var(--gold);display:flex;align-items:center;justify-content:space-between;padding:0 20px}.brand{font-size:20px;font-weight:850}.brand span{color:var(--gold)}button,input,select,textarea{font:inherit}button{border:0;border-radius:10px;background:var(--navy2);color:#fff;font-weight:700;padding:10px 14px;cursor:pointer}button.gold{background:var(--gold);color:var(--navy)}button.light{background:#edf1f6;color:var(--navy)}button:disabled{opacity:.5;cursor:not-allowed}input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px;background:#fff;color:var(--ink)}.wrap{max-width:1180px;margin:24px auto;padding:0 16px}.panel{background:white;border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 30px #102b4d0a}.auth{max-width:420px;margin:8vh auto;padding:25px}.auth h1{margin:0;color:var(--navy)}.stack{display:grid;gap:12px}.muted{color:var(--muted)}.small{font-size:12px}.hidden{display:none!important}.notice{padding:10px 12px;border-radius:10px;background:#f9edcf;color:#624b17;margin-bottom:14px;display:none}.notice.error{display:block;background:#fde9e9;color:#9b2626}.notice.info{display:block}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.stat{padding:16px}.stat b{display:block;font-size:27px;color:var(--navy)}.stat span{font-size:12px;color:var(--muted)}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.toolbar select{width:auto;min-width:160px}.reports{display:grid;gap:12px}.report{padding:16px;display:grid;gap:10px}.report-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.pill{border-radius:99px;padding:5px 10px;background:#f5ecd8;color:#71551b;font-size:11px;font-weight:800;white-space:nowrap}.pill.reviewing{background:#e7efff;color:#234e8b}.pill.resolved{background:#e5f5eb;color:#17643a}.pill.dismissed{background:#edf0f4;color:#667085}.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:grid;gap:5px}.field label{font-size:11px;color:var(--muted);font-weight:700}.actions{display:flex;gap:8px;flex-wrap:wrap}.empty{padding:30px;text-align:center;color:var(--muted)}@media(max-width:700px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.report-grid{grid-template-columns:1fr}.wrap{margin:16px auto}.report{padding:13px}}
+</style></head><body>
+<header><div class="brand">MK <span>Messenger</span> <small style="font-size:11px;color:#cbd5e1">OWNER</small></div><div class="small" id="ownerIdentity"></div></header>
+<div class="wrap"><div id="notice" class="notice"></div>
+<section id="login" class="panel auth"><h1>Owner Login</h1><p class="muted">Restricted access · MK Messenger administration</p><div class="stack"><input id="email" type="email" autocomplete="username" placeholder="Owner email"><input id="password" type="password" autocomplete="current-password" placeholder="Password"><button id="loginBtn" class="gold">Sign in as Owner</button><button id="setupOwnerBtn" class="light" type="button">Initialize first Owner account</button><p class="small muted">First-time setup is restricted to 1987zinwaimin@gmail.com and permanently clears its existing Customer data before enabling Owner access. Your login email and password are retained.</p><a href="/" class="small">← Customer Login</a></div></section>
+<section id="dashboard" class="hidden"><div class="top"><div><h1 style="margin:0;color:var(--navy)">Owner Dashboard</h1><div class="muted small">Customer safety and report management</div></div><div class="actions"><button id="refreshBtn" class="light">Refresh</button><button id="logoutBtn">Log out</button></div></div>
+<div class="stats"><div class="panel stat"><b id="totalCount">0</b><span>Total reports</span></div><div class="panel stat"><b id="openCount">0</b><span>Pending</span></div><div class="panel stat"><b id="reviewCount">0</b><span>Under review</span></div><div class="panel stat"><b id="closedCount">0</b><span>Resolved / dismissed</span></div></div>
+<section class="panel" style="padding:16px;margin:16px 0"><div class="top"><div><h2 style="margin:0;color:var(--navy)">Customer Accounts</h2><div class="muted small">Manage and permanently delete customer accounts. Active Owner accounts are excluded and protected from deletion.</div></div><button id="loadCustomersBtn" class="light">Refresh customers</button></div><div id="customers" class="reports"><div class="empty">Loading customers…</div></div></section>
+<div class="toolbar"><select id="statusFilter"><option value="all">All reports</option><option value="open">Pending</option><option value="reviewing">Under review</option><option value="resolved">Resolved</option><option value="dismissed">Dismissed</option></select><select id="reasonFilter"><option value="all">All categories</option><option value="spam">Spam</option><option value="harassment">Harassment</option><option value="scam">Scam / fraud</option><option value="inappropriate">Inappropriate content</option><option value="impersonation">Impersonation</option><option value="other">Other</option></select></div>
+<div id="reports" class="reports"><div class="panel empty">Loading reports…</div></div></section></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="./config.js"></script>
+<script>
+(()=>{const $=id=>document.getElementById(id);let sb=null,owner=null,allReports=[],bootstrappingOwner=false;
+function msg(s,error=false){$('notice').textContent=s;$('notice').className='notice '+(error?'error':'info');}
+function clearMsg(){$('notice').className='notice';$('notice').textContent='';}
+function client(){const c=window.MK_CONFIG||{};if(!c.supabaseUrl||!c.supabaseAnonKey)throw new Error('Supabase configuration is missing.');return window.supabase.createClient(c.supabaseUrl,c.supabaseAnonKey);}
+async function verifyOwner(){const {data,error}=await sb.rpc('owner_session_check');if(error)throw error;if(data!==true)throw new Error('This account is not authorized as an Owner.');}
+async function showDashboard(){await verifyOwner();$('login').classList.add('hidden');$('dashboard').classList.remove('hidden');$('ownerIdentity').textContent=owner.email||'Owner';await Promise.all([loadReports(),loadCustomers()]);}
+async function boot(){try{sb=client();const {data:{session}}=await sb.auth.getSession();if(session){owner=session.user;try{await showDashboard();}catch(e){await sb.auth.signOut();owner=null;msg(e.message,true);}}sb.auth.onAuthStateChange(async(_event,session)=>{if(bootstrappingOwner)return;if(session){owner=session.user;try{await showDashboard();}catch(e){await sb.auth.signOut();owner=null;$('dashboard').classList.add('hidden');$('login').classList.remove('hidden');msg(e.message,true);}}else{owner=null;$('dashboard').classList.add('hidden');$('login').classList.remove('hidden');$('ownerIdentity').textContent='';}});}catch(e){msg(e.message,true);}}
+async function login(){clearMsg();const email=$('email').value.trim(),password=$('password').value;if(!email||!password)return msg('Enter Owner email and password.',true);$('loginBtn').disabled=true;try{const {data,error}=await sb.auth.signInWithPassword({email,password});if(error)throw error;owner=data.user;await showDashboard();}catch(e){msg(e.message||String(e),true);}finally{$('loginBtn').disabled=false;}}
+async function setupFirstOwner(){
+ clearMsg();
+ const email=$('email').value.trim().toLowerCase(),password=$('password').value;
+ if(email!=='1987zinwaimin@gmail.com')return msg('Use the designated Owner Gmail address.',true);
+ if(!password)return msg('Enter the current Customer account password to verify ownership.',true);
+ if(!confirm('FINAL CONFIRMATION: This will permanently remove all existing Customer messages, posts, media, connections and personal data for this Gmail, then enable it as the first MK Owner. The Gmail login and password will remain. Continue?'))return;
+ $('setupOwnerBtn').disabled=true;
+ bootstrappingOwner=true;
+ try{
+  const {data,error}=await sb.auth.signInWithPassword({email,password});
+  if(error)throw new Error('Password verification failed. No data was changed.');
+  const {data:result,error:invokeError}=await sb.functions.invoke('delete-customer-account',{
+   body:{targetUserId:data.user.id,convertToOwner:true,username:'zinwaimin',displayName:'MK Owner'}
+  });
+  if(invokeError)throw invokeError;
+  if(!result?.ok||result.convertedToOwner!==true)throw new Error(result?.error||'Owner setup was not confirmed by the server.');
+  owner=data.user;
+  msg('Customer data cleared. First Owner account is now active.');
+  await showDashboard();
+ }catch(e){msg(e.message||String(e),true);}
+ finally{bootstrappingOwner=false;$('setupOwnerBtn').disabled=false;}
+}
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function date(s){return s?new Date(s).toLocaleString():'—';}
+async function loadCustomers(){
+ $('customers').innerHTML='<div class="empty">Loading customers…</div>';
+ try{
+  const {data,error}=await sb.rpc('list_mk_customer_profiles');
+  if(error)throw error;
+  allCustomerProfiles=data||[];
+  if(!data?.length){$('customers').innerHTML='<div class="empty">No customer accounts found.</div>';return;}
+  $('customers').innerHTML=data.map(p=>'<div class="panel report" style="box-shadow:none"><div class="report-head"><div><b>'+esc(p.display_name||p.username)+'</b><div class="small muted">@'+esc(p.username)+' · '+esc(date(p.created_at))+'</div></div><button class="light" data-delete-customer="'+esc(p.id)+'" style="background:#a32626;color:white">Delete permanently</button></div></div>').join('');
+ }catch(e){$('customers').innerHTML='<div class="empty">Could not load customers: '+esc(e.message)+'</div>';}
+}
+async function deleteCustomerAccount(id){
+ const row=allCustomerProfiles.find(p=>p.id===id);
+ if(!row)return;
+ const name=row.display_name||row.username||id;
+ if(!confirm('Permanently delete '+name+'? This removes the account, profile, all messages sent by this customer in every chat/group, posts, media, reports and account data. This cannot be undone.'))return;
+ try{
+  const {data,error}=await sb.functions.invoke('delete-customer-account',{body:{targetUserId:id}});
+  if(error)throw error;
+  if(!data?.ok)throw new Error(data?.error||'Deletion was not confirmed.');
+  msg('Customer account permanently deleted.');
+  await Promise.all([loadCustomers(),loadReports()]);
+ }catch(e){msg('Could not delete customer: '+(e.message||String(e)),true);}
+}
+let allCustomerProfiles=[];
+async function loadReports(){clearMsg();$('reports').innerHTML='<div class="panel empty">Loading reports…</div>';try{const {data,error}=await sb.from('user_reports').select('*').order('created_at',{ascending:false}).limit(300);if(error)throw error;allReports=data||[];const ids=[...new Set(allReports.flatMap(r=>[r.reporter_id,r.reported_user_id]).filter(Boolean))];let names={};if(ids.length){const {data:p,error:pe}=await sb.from('profiles').select('id,username,display_name').in('id',ids);if(pe)throw pe;(p||[]).forEach(x=>names[x.id]=x);}allReports.forEach(r=>{r.reporter=names[r.reporter_id]||{};r.reported=names[r.reported_user_id]||{};});render();}catch(e){$('reports').innerHTML='<div class="panel empty">Could not load reports: '+esc(e.message)+'</div>';}}
+function render(){const n=allReports.length,open=allReports.filter(x=>x.status==='open').length,review=allReports.filter(x=>x.status==='reviewing').length,closed=allReports.filter(x=>['resolved','dismissed'].includes(x.status)).length;$('totalCount').textContent=n;$('openCount').textContent=open;$('reviewCount').textContent=review;$('closedCount').textContent=closed;const st=$('statusFilter').value,rs=$('reasonFilter').value;const rows=allReports.filter(r=>(st==='all'||r.status===st)&&(rs==='all'||r.reason===rs));if(!rows.length){$('reports').innerHTML='<div class="panel empty">No reports match this filter.</div>';return;}$('reports').innerHTML=rows.map(r=>{const reporter=r.reporter.display_name||r.reporter.username||r.reporter_id,reported=r.reported.display_name||r.reported.username||r.reported_user_id;return '<article class="panel report" data-id="'+esc(r.id)+'"><div class="report-head"><div><b>'+esc(r.reason||'Report')+'</b><div class="small muted">Submitted '+esc(date(r.created_at))+'</div></div><span class="pill '+esc(r.status)+'">'+esc(r.status)+'</span></div><div class="report-grid"><div><div class="small muted">Reported by</div><b>'+esc(reporter)+'</b></div><div><div class="small muted">Reported account</div><b>'+esc(reported)+'</b></div></div><div><div class="small muted">Details</div><div style="white-space:pre-wrap">'+esc(r.details||'No additional details')+'</div></div><div class="field"><label>OWNER REVIEW NOTE</label><textarea class="resolution" rows="2" maxlength="2000" placeholder="Add a private resolution note">'+esc(r.resolution_note||'')+'</textarea></div><div class="actions"><button class="light" data-status="reviewing">Mark reviewing</button><button class="gold" data-status="resolved">Resolve</button><button class="light" data-status="dismissed">Dismiss</button></div></article>';}).join('');}
+async function updateReport(id,status,noteText){try{const patch={status,reviewed_by:owner.id,reviewed_at:new Date().toISOString(),resolution_note:noteText,updated_at:new Date().toISOString()};const {error}=await sb.from('user_reports').update(patch).eq('id',id);if(error)throw error;const {error:ae}=await sb.rpc('record_owner_action',{p_action:'report_'+status,p_target_user_id:null,p_report_id:id,p_details:{status,resolution_note:noteText}});if(ae)throw ae;msg('Report updated: '+status);await loadReports();}catch(e){msg('Could not update report: '+e.message,true);}}
+$('loginBtn').onclick=login;$('setupOwnerBtn').onclick=setupFirstOwner;$('password').addEventListener('keydown',e=>{if(e.key==='Enter')login();});$('refreshBtn').onclick=()=>Promise.all([loadReports(),loadCustomers()]);$('loadCustomersBtn').onclick=loadCustomers;$('customers').addEventListener('click',e=>{const b=e.target.closest('button[data-delete-customer]');if(b)deleteCustomerAccount(b.dataset.deleteCustomer);});$('logoutBtn').onclick=()=>sb.auth.signOut();$('statusFilter').onchange=render;$('reasonFilter').onchange=render;$('reports').addEventListener('click',e=>{const b=e.target.closest('button[data-status]');if(!b)return;const card=b.closest('[data-id]');updateReport(card.dataset.id,b.dataset.status,card.querySelector('.resolution').value.trim());});boot();})();
+</script></body></html>
